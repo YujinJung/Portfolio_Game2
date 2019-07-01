@@ -8,6 +8,8 @@
 #include "GameFramework/Controller.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
+#include "LandBlock.h"
+#include "MathFunc.h"
 
 // Sets default values
 AMyCharacter::AMyCharacter()
@@ -74,14 +76,20 @@ void AMyCharacter::LookUpAtRate(float Rate)
 	AddControllerPitchInput(Rate * BaseLookUpAtRate * GetWorld()->GetDeltaSeconds());
 }
 
-bool AMyCharacter::CheckBlock(FHitResult &OutHit)
+/*
+ * DuplicateCheck ; 0 : no check / 1 : Block location duplicate check
+ */
+bool AMyCharacter::CheckBlock(FHitResult &OutHit, FVector EndTrace = FVector::ZeroVector, uint8 DuplicateCheck = 0)
 {
 	FVector CamLocation;
 	FRotator CamRotation;
 	Controller->GetPlayerViewPoint(CamLocation, CamRotation);
 
 	const FVector Direction = CamRotation.Vector();
-	const FVector EndTrace = CamLocation + Direction * 1000.f;
+	if (DuplicateCheck == 0)
+	{
+		EndTrace = CamLocation + Direction * 2000.f;
+	}
 
 	FCollisionQueryParams TraceParams(FName(TEXT("TraceParams")), true, this);
 	TraceParams.bReturnPhysicalMaterial = true;
@@ -96,15 +104,52 @@ bool AMyCharacter::CheckBlock(FHitResult &OutHit)
 		return false;
 	}
 }
+void AMyCharacter::PlaceBlock()
+{
+	FHitResult Hit(ForceInit);
+	AActor* HitBlock;
+
+	auto MaxAbsoluteValue = [](float& a, float& b) -> float& {
+		using namespace MathFunc;
+		if (AbsoluteValue<float>(a) > AbsoluteValue<float>(b))
+		{
+			b = 0.f; return a;
+		}
+		else
+		{
+			a = 0.f; return b;
+		}
+	};
+	
+	if (CheckBlock(Hit))
+	{
+		HitBlock = Hit.GetActor();
+		const FVector HitBlockCenter = HitBlock->GetActorLocation();
+		FVector PlaceDirection = Hit.Location - HitBlockCenter;
+		// TODO: Block Rotation check
+		const FRotator Rotation = FRotator::ZeroRotator;
+
+		// Vector; HitActor`s Center -> HitActor`s Hit Location 
+		// Set zero except largest coord value 
+		float& MaxValue = MaxAbsoluteValue(MaxAbsoluteValue(PlaceDirection.X, PlaceDirection.Y), PlaceDirection.Z);
+		FVector PlaceLocation = PlaceDirection * 2.0f + HitBlockCenter;
+
+		// Block Location Duplication Check
+		FHitResult DuplicateHitResult;
+		if (!CheckBlock(DuplicateHitResult, PlaceLocation, 1))
+		{
+			GetWorld()->SpawnActor<ALandBlock>(PlaceLocation, Rotation);
+		}
+	}
+}
 void AMyCharacter::DestroyBlock()
 {
 	FHitResult Hit;
 
 	if (CheckBlock(Hit))
 	{
-		const FVector Location = Hit.GetActor()->GetActorLocation();
-		UE_LOG(LogTemp, Warning, TEXT("Destroy Block : %s"), *Location.ToString());
-
+		//const FVector Location = Hit.GetActor()->GetActorLocation();
+		//UE_LOG(LogTemp, Warning, TEXT("Destroy Block : %s"), *Location.ToString());
 		Hit.GetActor()->Destroy();
 	}
 }
@@ -124,6 +169,7 @@ void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 	PlayerInputComponent->BindAction("LClick", IE_Pressed, this, &AMyCharacter::DestroyBlock);
+	PlayerInputComponent->BindAction("RClick", IE_Pressed, this, &AMyCharacter::PlaceBlock);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AMyCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AMyCharacter::MoveRight);

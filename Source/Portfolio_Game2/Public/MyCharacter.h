@@ -37,7 +37,8 @@ protected:
 	void LookUpAtRate(float Rate);
 	
 	// Create / Destroy Block
-	bool CheckBlock(FHitResult& Hit);
+	bool CheckBlock(FHitResult& OutHit, FVector EndTrace, uint8 DuplicateCheck);
+	void PlaceBlock();
 	void DestroyBlock();
 
 public:	
