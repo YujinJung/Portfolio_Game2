@@ -23,7 +23,7 @@ AMyCharacter::AMyCharacter()
 
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("Camera Boom"));
 	CameraBoom->AttachTo(RootComponent);
-	CameraBoom->TargetArmLength = 0.f;
+	CameraBoom->TargetArmLength = 50.f;
 	CameraBoom->bUsePawnControlRotation = true;
 
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Follow Camera"));
@@ -74,6 +74,41 @@ void AMyCharacter::LookUpAtRate(float Rate)
 	AddControllerPitchInput(Rate * BaseLookUpAtRate * GetWorld()->GetDeltaSeconds());
 }
 
+bool AMyCharacter::CheckBlock(FHitResult &OutHit)
+{
+	FVector CamLocation;
+	FRotator CamRotation;
+	Controller->GetPlayerViewPoint(CamLocation, CamRotation);
+
+	const FVector Direction = CamRotation.Vector();
+	const FVector EndTrace = CamLocation + Direction * 1000.f;
+
+	FCollisionQueryParams TraceParams(FName(TEXT("TraceParams")), true, this);
+	TraceParams.bReturnPhysicalMaterial = true;
+	GetWorld()->LineTraceSingleByChannel(OutHit, CamLocation, EndTrace, ECollisionChannel::ECC_WorldStatic, TraceParams);
+
+	if (OutHit.GetActor() != NULL)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+void AMyCharacter::DestroyBlock()
+{
+	FHitResult Hit;
+
+	if (CheckBlock(Hit))
+	{
+		const FVector Location = Hit.GetActor()->GetActorLocation();
+		UE_LOG(LogTemp, Warning, TEXT("Destroy Block : %s"), *Location.ToString());
+
+		Hit.GetActor()->Destroy();
+	}
+}
+
 // Called every frame
 void AMyCharacter::Tick(float DeltaTime)
 {
@@ -88,6 +123,7 @@ void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+	PlayerInputComponent->BindAction("LClick", IE_Pressed, this, &AMyCharacter::DestroyBlock);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AMyCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AMyCharacter::MoveRight);

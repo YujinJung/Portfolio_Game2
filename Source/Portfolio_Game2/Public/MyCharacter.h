@@ -35,6 +35,10 @@ protected:
 	// Mouse Movement
 	void TurnAtRate(float Rate);
 	void LookUpAtRate(float Rate);
+	
+	// Create / Destroy Block
+	bool CheckBlock(FHitResult& Hit);
+	void DestroyBlock();
 
 public:	
 	// Called every frame
