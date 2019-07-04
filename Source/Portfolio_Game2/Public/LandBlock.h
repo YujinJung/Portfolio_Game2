@@ -3,21 +3,37 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Engine/StaticMeshActor.h"
+#include "Block.h"
 #include "LandBlock.generated.h"
 
 /**
  * 
  */
+enum LandCubeState {
+	Dirt,
+	Grass
+};
+
 UCLASS()
-class PORTFOLIO_GAME2_API ALandBlock : public AStaticMeshActor
+class PORTFOLIO_GAME2_API ALandBlock : public ABlock
 {
 	GENERATED_BODY()
-	
+
+public:
+
+private:
+	FTimerHandle GrassTimerHandle;
+	LandCubeState State;
+	float GrassTime;
+
 public:
 	ALandBlock();
-	const float BlockSize = 100.f;
-	UStaticMeshComponent* LandBlockMeshComponent;
 
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 
+	void GrowTimer();
+	void GrowGrass();
+	FORCEINLINE void SetGrassTime(float InGrassTime) { GrassTime = InGrassTime; };
+	void SetState(LandCubeState InState) { UE_LOG(LogTemp, Warning, TEXT("set state"));  State = InState; }
 };

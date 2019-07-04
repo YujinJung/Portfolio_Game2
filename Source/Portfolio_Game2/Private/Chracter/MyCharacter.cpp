@@ -14,7 +14,7 @@
 // Sets default values
 AMyCharacter::AMyCharacter()
 {
-	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.f);
+	GetCapsuleComponent()->InitCapsuleSize(42.f, 150.f);
 
 	BaseTurnAtRate = 45.f;
 	BaseLookUpAtRate = 45.f;
@@ -79,7 +79,7 @@ void AMyCharacter::LookUpAtRate(float Rate)
 /*
  * DuplicateCheck ; 0 : no check / 1 : Block location duplicate check
  */
-bool AMyCharacter::CheckBlock(FHitResult &OutHit, FVector EndTrace = FVector::ZeroVector, uint8 DuplicateCheck = 0)
+bool AMyCharacter::CheckBlock(FHitResult &OutHit, uint8 DuplicateCheck = 0, FVector EndTrace = FVector::ZeroVector, FVector StartTrace = FVector::ZeroVector)
 {
 	FVector CamLocation;
 	FRotator CamRotation;
@@ -90,10 +90,14 @@ bool AMyCharacter::CheckBlock(FHitResult &OutHit, FVector EndTrace = FVector::Ze
 	{
 		EndTrace = CamLocation + Direction * 2000.f;
 	}
+	if (StartTrace == FVector::ZeroVector)
+	{
+		StartTrace = CamLocation;
+	}
 
 	FCollisionQueryParams TraceParams(FName(TEXT("TraceParams")), true, this);
 	TraceParams.bReturnPhysicalMaterial = true;
-	GetWorld()->LineTraceSingleByChannel(OutHit, CamLocation, EndTrace, ECollisionChannel::ECC_WorldStatic, TraceParams);
+	GetWorld()->LineTraceSingleByChannel(OutHit, StartTrace, EndTrace, ECollisionChannel::ECC_WorldStatic, TraceParams);
 
 	if (OutHit.GetActor() != NULL)
 	{
@@ -103,6 +107,21 @@ bool AMyCharacter::CheckBlock(FHitResult &OutHit, FVector EndTrace = FVector::Ze
 	{
 		return false;
 	}
+}
+bool AMyCharacter::CheckBlockName(AActor* Block, const FString &CheckBlockName)
+{
+	// LandBlock_number
+	FString BlockName = Block->GetName();
+	TArray<FString> OutArray;
+	BlockName.ParseIntoArray(OutArray, TEXT("_"));
+	BlockName = OutArray[0];
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *BlockName);
+
+	if (BlockName.Equals(CheckBlockName))
+	{
+		return true;
+	}
+	return false;
 }
 void AMyCharacter::PlaceBlock()
 {
@@ -124,21 +143,30 @@ void AMyCharacter::PlaceBlock()
 	if (CheckBlock(Hit))
 	{
 		HitBlock = Hit.GetActor();
-		const FVector HitBlockCenter = HitBlock->GetActorLocation();
-		FVector PlaceDirection = Hit.Location - HitBlockCenter;
+		const FVector HitBlockLocation = HitBlock->GetActorLocation();
+		FVector PlaceDirection = Hit.Location - HitBlockLocation;
 		// TODO: Block Rotation check
 		const FRotator Rotation = FRotator::ZeroRotator;
 
 		// Vector; HitActor`s Center -> HitActor`s Hit Location 
 		// Set zero except largest coord value 
 		float& MaxValue = MaxAbsoluteValue(MaxAbsoluteValue(PlaceDirection.X, PlaceDirection.Y), PlaceDirection.Z);
-		FVector PlaceLocation = PlaceDirection * 2.0f + HitBlockCenter;
+		FVector PlaceLocation = PlaceDirection * 2.0f + HitBlockLocation;
 
 		// Block Location Duplication Check
 		FHitResult DuplicateHitResult;
-		if (!CheckBlock(DuplicateHitResult, PlaceLocation, 1))
+		if (!CheckBlock(DuplicateHitResult, 1, PlaceLocation))
 		{
 			GetWorld()->SpawnActor<ALandBlock>(PlaceLocation, Rotation);
+		}
+
+		if(CheckBlockName(HitBlock, FString(TEXT("LandBlock"))))
+		{
+			ALandBlock* LandBlock = Cast<ALandBlock>(HitBlock);
+			LandBlock->SetState(LandCubeState::Dirt);
+			LandBlock->SetGrassTime(0.f);
+			LandBlock->SetMaterial(BlockSurface::Top, TEXT("/Game/MinecraftContents/Materials/Block/M_Dirt"));
+			LandBlock->SetMaterial(BlockSurface::Side, TEXT("/Game/MinecraftContents/Materials/Block/M_Dirt"));
 		}
 	}
 }
@@ -148,17 +176,33 @@ void AMyCharacter::DestroyBlock()
 
 	if (CheckBlock(Hit))
 	{
-		//const FVector Location = Hit.GetActor()->GetActorLocation();
+		const FVector HitBlockLocation = Hit.GetActor()->GetActorLocation();
+
+		// Bottom Block Check
+		FHitResult BottomBlockHit;
+		const FVector HitBlockBottomLocation(HitBlockLocation.X, HitBlockLocation.Y, HitBlockLocation.Z - 100.f);
+		if (CheckBlock(BottomBlockHit, 1, HitBlockBottomLocation, HitBlockLocation))
+		{
+			AActor* BottomBlock = BottomBlockHit.GetActor();
+			if (CheckBlockName(BottomBlock, FString(TEXT("LandBlock"))))
+			{
+				// If Bottom Block is LandBlock, set the grass to grow.
+				ALandBlock* LandBlock = Cast<ALandBlock>(BottomBlock);
+				LandBlock->SetState(LandCubeState::Grass);
+				LandBlock->GrowTimer();
+			}
+		}
+
 		//UE_LOG(LogTemp, Warning, TEXT("Destroy Block : %s"), *Location.ToString());
 		Hit.GetActor()->Destroy();
 	}
 }
 
+
 // Called every frame
 void AMyCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
 // Called to bind functionality to input
