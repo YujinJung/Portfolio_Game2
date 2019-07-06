@@ -23,12 +23,12 @@ public:
 
 private:
 	FTimerHandle GrassTimerHandle;
-	LandCubeState State;
 	float GrassTime;
 
 public:
 	ALandBlock();
 
+	LandCubeState State;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 

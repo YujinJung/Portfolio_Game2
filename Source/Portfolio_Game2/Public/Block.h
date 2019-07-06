@@ -26,7 +26,6 @@ private:
 	// Need Material Path
 	ABlock();
 
-protected:
 public:
 	ABlock(const TCHAR *MaterialPath);
 	ABlock(const TCHAR *MaterialPathSideBot, const TCHAR *MaterialPathTop);

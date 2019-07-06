@@ -8,6 +8,7 @@
 #include "GameFramework/Controller.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
+#include "TimerManager.h"
 #include "LandBlock.h"
 #include "MathFunc.h"
 
@@ -40,6 +41,11 @@ AMyCharacter::AMyCharacter()
 void AMyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	PlayerPreviousLocation = GetActorLocation();
+	InitializeMap();
+
+	GetWorldTimerManager().SetTimer(MapRefreshTimeHandler, this, &AMyCharacter::RefreshMap, 0.1f, true);
 }
 
 void AMyCharacter::MoveForward(float Value)
@@ -115,7 +121,7 @@ bool AMyCharacter::CheckBlockName(AActor* Block, const FString &CheckBlockName)
 	TArray<FString> OutArray;
 	BlockName.ParseIntoArray(OutArray, TEXT("_"));
 	BlockName = OutArray[0];
-	UE_LOG(LogTemp, Warning, TEXT("%s"), *BlockName);
+	//UE_LOG(LogTemp, Warning, TEXT("%s"), *BlockName);
 
 	if (BlockName.Equals(CheckBlockName))
 	{
@@ -198,11 +204,145 @@ void AMyCharacter::DestroyBlock()
 	}
 }
 
+void AMyCharacter::InitializeMap()
+{
+	const FRotator SpawnRotation(FRotator::ZeroRotator);
+	FVector PlayerBaseBlock;
+	PlayerBaseBlock.X = CalcXY(PlayerBaseBlock.X) * 100.f;
+	PlayerBaseBlock.Y = CalcXY(PlayerBaseBlock.Y) * 100.f;
+	PlayerBaseBlock.Z = 0.f;
+
+	for (int X = -BlockRange; X <= BlockRange; ++X)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%d"), X);
+		TDoubleLinkedList<ALandBlock*>* MapBlockX = new TDoubleLinkedList<ALandBlock*>();
+		for (int Y = -BlockRange; Y <= BlockRange; ++Y)
+		{
+			FVector SpawnLocation(PlayerBaseBlock);
+
+			SpawnLocation.X += (X * 100.f);
+			SpawnLocation.Y += (Y * 100.f);
+
+			ALandBlock* SpawnBlock = GetWorld()->SpawnActor<ALandBlock>(SpawnLocation, SpawnRotation);
+			(*MapBlockX).AddTail(MoveTemp(SpawnBlock));
+		}
+		MapBlock.AddTail(MoveTemp(MapBlockX));
+	}
+	
+}
+void AMyCharacter::RefreshMapBaseX(int& OffsetX)
+{
+	bool isTop= ((OffsetX < 0) ? true : false);
+	OffsetX = (isTop) ? (-1 * OffsetX) : OffsetX;
+
+	for (int i = 1; i <= OffsetX; ++i)
+	{
+		TDoubleLinkedList<ALandBlock*>* SpawnBlocks = new TDoubleLinkedList<ALandBlock*>();
+		if (isTop) // X - 100
+		{
+			TDoubleLinkedList<ALandBlock*>* Head = MapBlock.GetHead()->GetValue();
+			for (auto& e : *Head)
+			{
+				FVector SpawnLocation = e->GetActorLocation();
+				SpawnLocation.X -= 100.f;
+				ALandBlock* Block = GetWorld()->SpawnActor<ALandBlock>(SpawnLocation, FRotator::ZeroRotator);
+				SpawnBlocks->AddHead(MoveTemp(Block));
+			}
+
+			MapBlock.AddHead(MoveTemp(SpawnBlocks));
+
+			auto Tail = MapBlock.GetTail()->GetValue();
+			for (auto& e : *Tail)
+			{
+				e->Destroy();
+			}
+			MapBlock.RemoveNode(MapBlock.GetTail());
+		}
+		else // X + 100
+		{
+			TDoubleLinkedList<ALandBlock*>* Tail = MapBlock.GetTail()->GetValue();
+			for (auto& e : *Tail)
+			{
+				FVector SpawnLocation = e->GetActorLocation();
+				SpawnLocation.X += 100.f;
+				ALandBlock* Block = GetWorld()->SpawnActor<ALandBlock>(SpawnLocation, FRotator::ZeroRotator);
+				SpawnBlocks->AddTail(MoveTemp(Block));
+			}
+
+			MapBlock.AddTail(MoveTemp(SpawnBlocks));
+
+			auto Head = MapBlock.GetHead()->GetValue();
+			for (auto& e : *Head)
+			{
+				e->Destroy();
+			}
+			MapBlock.RemoveNode(MapBlock.GetHead());
+		}
+	}
+
+}
+void AMyCharacter::RefreshMapBaseY(int& OffsetY)
+{
+	bool isLeft = ((OffsetY < 0) ? true : false);
+	OffsetY = (isLeft) ? (-1 * OffsetY) : OffsetY;
+	
+	for (auto& e : MapBlock)
+	{
+		for (int i = 1; i <= OffsetY; ++i)
+		{
+			//TODO : Random Block
+			if (isLeft)
+			{
+				FVector SpawnLocation = e->GetHead()->GetValue()->GetActorLocation();
+				SpawnLocation.Y -= 100.f;
+				ALandBlock* Block = GetWorld()->SpawnActor<ALandBlock>(SpawnLocation, FRotator::ZeroRotator);
+				e->AddHead(MoveTemp(Block));
+
+				ABlock* DeleteBlock = e->GetTail()->GetValue();
+				DeleteBlock->Destroy();
+				e->RemoveNode(e->GetTail());
+			}
+			else
+			{
+				FVector SpawnLocation = e->GetTail()->GetValue()->GetActorLocation();
+				SpawnLocation.Y += 100.f;
+				ALandBlock* Block = GetWorld()->SpawnActor<ALandBlock>(SpawnLocation, FRotator::ZeroRotator);
+				e->AddTail(MoveTemp(Block));
+
+				ABlock* DeleteBlock = e->GetHead()->GetValue();
+				DeleteBlock->Destroy();
+				e->RemoveNode(e->GetHead());
+			}
+
+		}
+	}
+}
+void AMyCharacter::RefreshMap()
+{
+	const FVector PlayerLocation = GetActorLocation();
+
+	int OffsetX = CalcXY(PlayerLocation.X) - CalcXY(PlayerPreviousLocation.X);
+	int OffsetY = CalcXY(PlayerLocation.Y) - CalcXY(PlayerPreviousLocation.Y);
+
+	if (OffsetX != 0)
+	{
+		RefreshMapBaseX(OffsetX);
+	}
+	if (OffsetY != 0)
+	{
+		RefreshMapBaseY(OffsetY);
+	}
+
+	// Store PlayerLocation for next tick
+	PlayerPreviousLocation = PlayerLocation;
+}
 
 // Called every frame
 void AMyCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	
 }
 
 // Called to bind functionality to input
