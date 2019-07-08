@@ -29,9 +29,11 @@ private:
 public:
 	ALandBlock();
 
+
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 
+	void SetGrass();
 	void GrowTimer();
 	void GrowGrass();
 	FORCEINLINE void SetGrassTime(float InGrassTime) { GrassTime = InGrassTime; };

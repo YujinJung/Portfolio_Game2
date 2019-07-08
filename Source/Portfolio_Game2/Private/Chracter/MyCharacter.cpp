@@ -10,6 +10,7 @@
 #include "Components/InputComponent.h"
 #include "LandBlock.h"
 #include "MathFunc.h"
+#include "SimplexNoiseBPLibrary.h"
 
 // Sets default values
 AMyCharacter::AMyCharacter()
@@ -34,12 +35,15 @@ AMyCharacter::AMyCharacter()
 
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+
 }
 
 // Called when the game starts or when spawned
 void AMyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	GenerateBlockMap();
 }
 
 void AMyCharacter::MoveForward(float Value)
@@ -198,11 +202,69 @@ void AMyCharacter::DestroyBlock()
 	}
 }
 
+float AMyCharacter::CalcDensity(float x, float y)
+{
+	static const float cliffScale = 1.0f;
+	static const float noiseScale = 1.0f;
+	float noise = SimplexNoiseLib->SimplexNoise2D(x, y);
+	float cliff = (noise * 0.5f + 0.5f) * cliffScale;
+	float density = (noise + cliff) * noiseScale;
+
+	return noise * noiseScale;
+}
+
+void AMyCharacter::AddBlocks(FVector BlockIndex)
+{
+	float density = CalcDensity(BlockIndex.X * 0.01f, BlockIndex.Y * 0.01f);
+	BlockIndex *= 100.f;
+	BlockIndex.Z = floor(density* 10.f) * 100;
+	UE_LOG(LogTemp, Warning, TEXT("density : %.2f"), density);
+	//if (density > 0)
+	{
+		ALandBlock* SpawnBlock = GetWorld()->SpawnActor<ALandBlock>(BlockIndex, FRotator::ZeroRotator);
+		SpawnBlock->SetGrass();
+		BlockArray.Add(SpawnBlock);
+	}
+}
+
+void AMyCharacter::GenerateBlockMap()
+{
+	FVector PlayerLocation = GetActorLocation();
+	PlayerLocation /= 100.f;
+
+	/*int x = CalcBlockNumber(PlayerLocation.X);
+	int y = CalcBlockNumber(PlayerLocation.Y);
+*/
+	int x = floor(PlayerLocation.X);
+	int y = floor(PlayerLocation.Y);
+
+	for (int i = -BlockRange; i < BlockRange; ++i)
+	{
+		for (int j = -BlockRange; j < BlockRange; ++j)
+		{
+			int CurX = x + i;
+			int CurY = y + j;
+
+			FVector2D BlockIndex(CurX, CurY);
+
+			if (!BlockIndexArray.Contains(BlockIndex))
+			{
+				AddBlocks(FVector(BlockIndex, 0.f));
+				BlockIndexArray.Add(BlockIndex);
+			}
+
+			//UE_LOG(LogTemp, Warning, TEXT("ss : %s"), *BlockIndexArray[0].ToString());
+			//UE_LOG(LogTemp, Warning, TEXT("x : %d y : %d "), i, j);
+		}
+	}
+}
 
 // Called every frame
 void AMyCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+
 }
 
 // Called to bind functionality to input

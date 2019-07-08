@@ -7,12 +7,12 @@
 
 APortfolio_Game2GameModeBase::APortfolio_Game2GameModeBase()
 {
-	static ConstructorHelpers::FClassFinder<APawn> PlayerPawn(TEXT("/Game/Blueprints/BP_Character"));
+	static ConstructorHelpers::FClassFinder<APawn> PlayerPawn(TEXT("/Game/Blueprints/Character/BP_Character"));
 	if (PlayerPawn.Class != NULL)
 	{
 		DefaultPawnClass = PlayerPawn.Class;
 	}
-	static ConstructorHelpers::FClassFinder<ACrosshairHUD> CrosshairHUD(TEXT("/Game/Blueprints/BP_CrosshairHUD"));
+	static ConstructorHelpers::FClassFinder<ACrosshairHUD> CrosshairHUD(TEXT("/Game/Blueprints/Character/BP_CrosshairHUD"));
 	if (CrosshairHUD.Class != NULL)
 	{
 		HUDClass = CrosshairHUD.Class;

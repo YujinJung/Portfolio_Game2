@@ -19,6 +19,13 @@ void ALandBlock::BeginPlay()
 	GrowTimer();
 }
 
+void ALandBlock::SetGrass()
+{
+	SetMaterial(BlockSurface::Top, TEXT("/Game/MinecraftContents/Materials/Block/M_Grass_Path_Top"));
+	SetMaterial(BlockSurface::Side, TEXT("/Game/MinecraftContents/Materials/Block/M_Grass_Path_Side"));
+	GrassTime = 10.f;
+}
+
 void ALandBlock::GrowTimer()
 {
 	GetWorldTimerManager().SetTimer(GrassTimerHandle, this, &ALandBlock::GrowGrass, 1.f, true, 10.f);
@@ -67,22 +74,4 @@ void ALandBlock::Tick(float DeltaTime)
 
 		return;
 	}
-	/*if (PlaceTime > 1000.f) { return; }
-
-	PlaceTime += 0.1f;
-
-	if (PlaceTime > 2.f)
-	{
-		SetMaterial(BlockSurface::Top, TEXT("/Game/MinecraftContents/Materials/Block/M_Dirt1"));
-	}
-	else if (PlaceTime > 5.f)
-	{
-		SetMaterial(BlockSurface::Top, TEXT("/Game/MinecraftContents/Materials/Block/M_Dirt2"));
-	}
-	else if (PlaceTime > 7.f)
-	{
-		SetMaterial(BlockSurface::Top, TEXT("/Game/MinecraftContents/Materials/Block/M_Grass_Path_Top"));
-		SetMaterial(BlockSurface::Side, TEXT("/Game/MinecraftContents/Materials/Block/M_Grass_Path_Side"));
-	}*/
-
 }

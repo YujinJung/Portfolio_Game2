@@ -6,19 +6,23 @@
 #include "GameFramework/Character.h"
 #include "MyCharacter.generated.h"
 
+class ALandBlock;
+
 UCLASS()
 class PORTFOLIO_GAME2_API AMyCharacter : public ACharacter
 {
 	GENERATED_BODY()
+
+public:
+	AMyCharacter();
+
+private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = true))
 	class USpringArmComponent* CameraBoom;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = true))
 	class UCameraComponent* FollowCamera;
 
 public:
-	// Sets default values for this character's properties
-	AMyCharacter();
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 	float BaseTurnAtRate;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
@@ -36,11 +40,31 @@ protected:
 	void TurnAtRate(float Rate);
 	void LookUpAtRate(float Rate);
 	
+private:
 	// Create / Destroy Block
 	bool CheckBlock(FHitResult& OutHit, uint8 DuplicateCheck, FVector EndTrace, FVector StartTrace);
 	bool CheckBlockName(AActor* Block, const FString& CheckBlockName);
 	void PlaceBlock();
 	void DestroyBlock();
+
+
+private:
+	const float BlockSize = 100.f;
+	const int BlockRange = 20;
+
+	UPROPERTY()
+		TArray<FVector2D> BlockIndexArray;
+	UPROPERTY()
+		TArray<ALandBlock*> BlockArray;
+	UPROPERTY()
+	class USimplexNoiseBPLibrary* SimplexNoiseLib;
+public:
+	float CalcDensity(float x, float y);
+	void AddBlocks(FVector BlockIndex);
+	UFUNCTION()
+	void GenerateBlockMap();
+
+	FORCEINLINE float CalcBlockNumber(const float& a) { return ((a + (BlockSize * 0.5f)) / 100.f); };
 
 public:	
 	// Called every frame
