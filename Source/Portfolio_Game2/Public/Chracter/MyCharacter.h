@@ -4,9 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "BlockArray.h"
 #include "MyCharacter.generated.h"
 
 class ALandBlock;
+
 
 UCLASS()
 class PORTFOLIO_GAME2_API AMyCharacter : public ACharacter
@@ -51,16 +53,19 @@ private:
 private:
 	const float BlockSize = 100.f;
 	const int BlockRange = 20;
-
-	UPROPERTY()
-		TArray<FVector2D> BlockIndexArray;
-	UPROPERTY()
-		TArray<ALandBlock*> BlockArray;
 	UPROPERTY()
 	class USimplexNoiseBPLibrary* SimplexNoiseLib;
+	UPROPERTY()
+	TArray<FBlockArray> PlacedBlockArray;
+
+	FTimerHandle GrassTimerHandle;
+
 public:
+	// 0 - generate block / 1 - remove block
+	int8 LockRemoveBlock;
 	float CalcDensity(float x, float y);
-	void AddBlocks(FVector BlockIndex);
+	void AddBlocks(FBlockArray& PlacedBlock);
+	void RemoveBlock();
 	UFUNCTION()
 	void GenerateBlockMap();
 

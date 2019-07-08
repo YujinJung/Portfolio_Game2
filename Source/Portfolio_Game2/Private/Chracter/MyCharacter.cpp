@@ -9,6 +9,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
 #include "LandBlock.h"
+#include "TimerManager.h"
 #include "MathFunc.h"
 #include "SimplexNoiseBPLibrary.h"
 
@@ -35,15 +36,14 @@ AMyCharacter::AMyCharacter()
 
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
+	LockRemoveBlock = 0;
 }
 
 // Called when the game starts or when spawned
 void AMyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
-	GenerateBlockMap();
+	//GetWorldTimerManager().SetTimer(GrassTimerHandle, this, &AMyCharacter::GenerateBlockMap, 1.f, true);
 }
 
 void AMyCharacter::MoveForward(float Value)
@@ -213,31 +213,63 @@ float AMyCharacter::CalcDensity(float x, float y)
 	return noise * noiseScale;
 }
 
-void AMyCharacter::AddBlocks(FVector BlockIndex)
+void AMyCharacter::AddBlocks(FBlockArray& PlacedBlock)
 {
+	FVector BlockIndex(PlacedBlock.BlockIndex, 0.f);
 	float density = CalcDensity(BlockIndex.X * 0.01f, BlockIndex.Y * 0.01f);
 	BlockIndex *= 100.f;
 	BlockIndex.Z = floor(density* 10.f) * 100;
-	UE_LOG(LogTemp, Warning, TEXT("density : %.2f"), density);
+
 	//if (density > 0)
-	{
 		ALandBlock* SpawnBlock = GetWorld()->SpawnActor<ALandBlock>(BlockIndex, FRotator::ZeroRotator);
 		SpawnBlock->SetGrass();
-		BlockArray.Add(SpawnBlock);
-	}
+		PlacedBlock.PlacedBlock = SpawnBlock;
+		PlacedBlock.flags = 0;
+		PlacedBlockArray.Add(PlacedBlock);
 }
+
+
+void AMyCharacter::RemoveBlock()
+{
+	if (LockRemoveBlock == 0) return;
+	LockRemoveBlock = 1;
+
+	int32 index = 0;
+
+	for (auto& e : PlacedBlockArray)
+	{
+		e.flags += 1;
+		if (e.flags >= 2)
+		{
+			e.PlacedBlock->Destroy();
+			e.PlacedBlock = nullptr;
+			PlacedBlockArray.RemoveAt(index);
+		}
+		index++;
+	}
+
+	LockRemoveBlock = 0;
+}
+
+// 1 2 3 4 5 6 7 8 9
+// 0 x 0 x x 0 x
+// 1 1 1 1 1 1 1
+// 2 1 2 1 1 2 1 2 2
+// 1 0 1 0 0 1 0 1 1
 
 void AMyCharacter::GenerateBlockMap()
 {
+	if (LockRemoveBlock == 1) return;
+	LockRemoveBlock = 0;
+
 	FVector PlayerLocation = GetActorLocation();
 	PlayerLocation /= 100.f;
 
-	/*int x = CalcBlockNumber(PlayerLocation.X);
-	int y = CalcBlockNumber(PlayerLocation.Y);
-*/
 	int x = floor(PlayerLocation.X);
 	int y = floor(PlayerLocation.Y);
 
+	static int ff = 0;
+	
 	for (int i = -BlockRange; i < BlockRange; ++i)
 	{
 		for (int j = -BlockRange; j < BlockRange; ++j)
@@ -245,26 +277,31 @@ void AMyCharacter::GenerateBlockMap()
 			int CurX = x + i;
 			int CurY = y + j;
 
-			FVector2D BlockIndex(CurX, CurY);
+			FVector2D CurrentIndex = FVector2D(CurX, CurY);
+			FBlockArray PlacedBlock(CurrentIndex);
+			int Index = ArrayFunc::Find<FBlockArray>(PlacedBlockArray, PlacedBlock);
 
-			if (!BlockIndexArray.Contains(BlockIndex))
+			if(Index == INDEX_NONE && (LockRemoveBlock == 0))
 			{
-				AddBlocks(FVector(BlockIndex, 0.f));
-				BlockIndexArray.Add(BlockIndex);
+				AddBlocks(PlacedBlock);
 			}
-
-			//UE_LOG(LogTemp, Warning, TEXT("ss : %s"), *BlockIndexArray[0].ToString());
-			//UE_LOG(LogTemp, Warning, TEXT("x : %d y : %d "), i, j);
+			else
+			{
+				PlacedBlockArray[Index].flags = 0;
+			}
 		}
 	}
+
+	LockRemoveBlock = 1;
+
+	RemoveBlock();
 }
 
 // Called every frame
 void AMyCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-
+	GenerateBlockMap();
 }
 
 // Called to bind functionality to input

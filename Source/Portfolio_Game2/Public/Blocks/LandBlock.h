@@ -21,6 +21,7 @@ class PORTFOLIO_GAME2_API ALandBlock : public ABlock
 
 public:
 
+
 private:
 	FTimerHandle GrassTimerHandle;
 	LandCubeState State;
@@ -28,7 +29,6 @@ private:
 
 public:
 	ALandBlock();
-
 
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
@@ -38,4 +38,7 @@ public:
 	void GrowGrass();
 	FORCEINLINE void SetGrassTime(float InGrassTime) { GrassTime = InGrassTime; };
 	void SetState(LandCubeState InState) { UE_LOG(LogTemp, Warning, TEXT("set state"));  State = InState; }
+
+public:
+
 };
