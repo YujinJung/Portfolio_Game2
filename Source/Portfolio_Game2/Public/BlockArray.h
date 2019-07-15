@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "LandBlock.h"
+#include "VoxelBlock.h"
 #include "Containers/Array.h"
 #include "BlockArray.generated.h"
 
@@ -16,7 +16,7 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	FVector2D BlockIndex;
 	UPROPERTY(VisibleAnywhere)
-	ALandBlock* PlacedBlock;
+	AVoxelBlock* PlacedBlock;
 	UPROPERTY(VisibleAnywhere)
 	int32 flags = 0;
 

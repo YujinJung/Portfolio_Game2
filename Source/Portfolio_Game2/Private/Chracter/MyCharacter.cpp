@@ -1,6 +1,4 @@
 // Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "MyCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -11,9 +9,9 @@
 #include "LandBlock.h"
 #include "TimerManager.h"
 #include "MathFunc.h"
-#include "SimplexNoiseBPLibrary.h"
+#include "VoxelBlock.h"
+#include "Vector2D.h"
 
-// Sets default values
 AMyCharacter::AMyCharacter()
 {
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 150.f);
@@ -36,13 +34,13 @@ AMyCharacter::AMyCharacter()
 
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	LockRemoveBlock = 0;
 }
 
 // Called when the game starts or when spawned
 void AMyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	GenerateBlockMap();
 	//GetWorldTimerManager().SetTimer(GrassTimerHandle, this, &AMyCharacter::GenerateBlockMap, 1.f, true);
 }
 
@@ -202,53 +200,47 @@ void AMyCharacter::DestroyBlock()
 	}
 }
 
-float AMyCharacter::CalcDensity(float x, float y)
-{
-	static const float cliffScale = 1.0f;
-	static const float noiseScale = 1.0f;
-	float noise = SimplexNoiseLib->SimplexNoise2D(x, y);
-	float cliff = (noise * 0.5f + 0.5f) * cliffScale;
-	float density = (noise + cliff) * noiseScale;
-
-	return noise * noiseScale;
-}
-
-void AMyCharacter::AddBlocks(FBlockArray& PlacedBlock)
-{
-	FVector BlockIndex(PlacedBlock.BlockIndex, 0.f);
-	float density = CalcDensity(BlockIndex.X * 0.01f, BlockIndex.Y * 0.01f);
-	BlockIndex *= 100.f;
-	BlockIndex.Z = floor(density* 10.f) * 100;
-
-	//if (density > 0)
-		ALandBlock* SpawnBlock = GetWorld()->SpawnActor<ALandBlock>(BlockIndex, FRotator::ZeroRotator);
-		SpawnBlock->SetGrass();
-		PlacedBlock.PlacedBlock = SpawnBlock;
-		PlacedBlock.flags = 0;
-		PlacedBlockArray.Add(PlacedBlock);
-}
+//float AMyCharacter::CalcDensity(float x, float y)
+//{
+//	static const float cliffScale = 1.0f;
+//	static const float noiseScale = 1.0f;
+//	float noise = SimplexNoiseLib->SimplexNoise2D(x, y);
+//	float cliff = (noise * 0.5f + 0.5f) * cliffScale;
+//	float density = (noise + cliff) * noiseScale;
+//
+//	return noise * noiseScale;
+//}
+//
+//void AMyCharacter::AddBlocks(FBlockArray& PlacedBlock)
+//{
+//	FVector BlockIndex(PlacedBlock.BlockIndex, 0.f);
+//	//float density = CalcDensity(BlockIndex.X * 0.01f, BlockIndex.Y * 0.01f);
+//	BlockIndex *= 100.f;
+//
+//	//if (density > 0)
+//		AVoxelBlock* SpawnBlock = GetWorld()->SpawnActor<AVoxelBlock>(BlockIndex, FRotator::ZeroRotator);
+//		PlacedBlock.PlacedBlock = SpawnBlock;
+//		PlacedBlock.flags = 0;
+//		PlacedBlockArray.Add(PlacedBlock);
+//}
 
 
 void AMyCharacter::RemoveBlock()
 {
-	if (LockRemoveBlock == 0) return;
-	LockRemoveBlock = 1;
-
 	int32 index = 0;
 
-	for (auto& e : PlacedBlockArray)
+	//for (auto& e : PlacedBlockArray)
+	for(int i = 0; i < PlacedBlockCoord.Num(); ++i)
 	{
-		e.flags += 1;
-		if (e.flags >= 2)
+		const FVector BlockCoord(PlacedBlockCoord[i] * BlockSize, 0.f);
+		if (!CheckRadius(BlockCoord))
 		{
-			e.PlacedBlock->Destroy();
-			e.PlacedBlock = nullptr;
-			PlacedBlockArray.RemoveAt(index);
+			PlacedBlockArray[i]->Destroy();
+			PlacedBlockArray.RemoveAt(i);
+			PlacedBlockCoord.RemoveAt(i);
 		}
-		index++;
-	}
 
-	LockRemoveBlock = 0;
+	}
 }
 
 // 1 2 3 4 5 6 7 8 9
@@ -257,43 +249,63 @@ void AMyCharacter::RemoveBlock()
 // 2 1 2 1 1 2 1 2 2
 // 1 0 1 0 0 1 0 1 1
 
-void AMyCharacter::GenerateBlockMap()
+bool AMyCharacter::CheckRadius(const FVector& BlockCoord)
 {
-	if (LockRemoveBlock == 1) return;
-	LockRemoveBlock = 0;
+	const float maxLength = BlockSize * BlockRange;
 
 	FVector PlayerLocation = GetActorLocation();
-	PlayerLocation /= 100.f;
+
+	PlayerLocation.Z = 0.f;
+
+	PlayerLocation /= BlockSize;
+	PlayerLocation.X = floor(PlayerLocation.X);
+	PlayerLocation.Y = floor(PlayerLocation.Y);
+	PlayerLocation *= BlockSize;
+
+	const FVector PlayerBlockVector = BlockCoord - PlayerLocation;
+	const float vectorLength = PlayerBlockVector.Size();
+
+	if (vectorLength <= maxLength)
+		return true;
+
+	return false;
+}
+
+void AMyCharacter::GenerateBlockMap()
+{
+	FVector PlayerLocation = GetActorLocation();
+	PlayerLocation /= BlockSize;
 
 	int x = floor(PlayerLocation.X);
 	int y = floor(PlayerLocation.Y);
 
-	static int ff = 0;
-	
-	for (int i = -BlockRange; i < BlockRange; ++i)
+	for (int i = -BlockRange; i <= BlockRange; ++i)
 	{
-		for (int j = -BlockRange; j < BlockRange; ++j)
+		for (int j = -BlockRange; j <= BlockRange; ++j)
 		{
 			int CurX = x + i;
 			int CurY = y + j;
 
 			FVector2D CurrentIndex = FVector2D(CurX, CurY);
-			FBlockArray PlacedBlock(CurrentIndex);
-			int Index = ArrayFunc::Find<FBlockArray>(PlacedBlockArray, PlacedBlock);
+			//int Index = ArrayFunc::Find<FVector2D>(PlacedBlockCoord, CurrentIndex);
 
-			if(Index == INDEX_NONE && (LockRemoveBlock == 0))
+			if (!PlacedBlockCoord.Contains(CurrentIndex))
 			{
-				AddBlocks(PlacedBlock);
+				if (CheckRadius(FVector(CurrentIndex * BlockSize, 0.f)))
+				{
+					AVoxelBlock* SpawnBlock = GetWorld()->SpawnActor<AVoxelBlock>(FVector(CurrentIndex * BlockSize, 0.f), FRotator::ZeroRotator);
+					SpawnBlock->GenerateChunk(FVector(CurrentIndex, 0.f));
+					PlacedBlockCoord.Add(CurrentIndex);
+					PlacedBlockArray.Add(SpawnBlock);
+				}
+				else
+				{
+					//UE_LOG(LogTemp, Warning, TEXT("NO ADD: x : (%d, %d), (%d, %d)"), x, y, CurX, CurY);
+				}
 			}
-			else
-			{
-				PlacedBlockArray[Index].flags = 0;
-			}
+
 		}
 	}
-
-	LockRemoveBlock = 1;
-
 	RemoveBlock();
 }
 

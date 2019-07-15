@@ -7,7 +7,7 @@
 #include "BlockArray.h"
 #include "MyCharacter.generated.h"
 
-class ALandBlock;
+class AVoxelBlock;
 
 
 UCLASS()
@@ -51,23 +51,26 @@ private:
 
 
 private:
-	const float BlockSize = 100.f;
-	const int BlockRange = 20;
+	const float BlockSize = 1000.f;
+	const int BlockRange = 6;
 	UPROPERTY()
-	class USimplexNoiseBPLibrary* SimplexNoiseLib;
+		TArray<FVector2D> PlacedBlockCoord;
 	UPROPERTY()
-	TArray<FBlockArray> PlacedBlockArray;
+		TArray<AVoxelBlock*> PlacedBlockArray;
+	//TArray<FBlockArray> PlacedBlockArray;
+
 
 	FTimerHandle GrassTimerHandle;
 
 public:
 	// 0 - generate block / 1 - remove block
-	int8 LockRemoveBlock;
-	float CalcDensity(float x, float y);
-	void AddBlocks(FBlockArray& PlacedBlock);
+	//int8 LockRemoveBlock;
+	//float CalcDensity(float x, float y);
+	//void AddBlocks(FBlockArray& PlacedBlock);
 	void RemoveBlock();
 	UFUNCTION()
 	void GenerateBlockMap();
+	bool CheckRadius(const FVector& BlockCoord);
 
 	FORCEINLINE float CalcBlockNumber(const float& a) { return ((a + (BlockSize * 0.5f)) / 100.f); };
 
