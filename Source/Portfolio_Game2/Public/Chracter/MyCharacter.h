@@ -44,21 +44,19 @@ protected:
 	
 private:
 	// Create / Destroy Block
-	bool CheckBlock(FHitResult& OutHit, uint8 DuplicateCheck, FVector EndTrace, FVector StartTrace);
+	bool CheckBlock(FHitResult& OutHit, FVector& HitLocation, int32& index);
 	bool CheckBlockName(AActor* Block, const FString& CheckBlockName);
 	void PlaceBlock();
 	void DestroyBlock();
 
 
 private:
-	const float BlockSize = 1000.f;
 	const int BlockRange = 6;
+	float BlockSize = 2000;
 	UPROPERTY()
 		TArray<FVector2D> PlacedBlockCoord;
 	UPROPERTY()
 		TArray<AVoxelBlock*> PlacedBlockArray;
-	//TArray<FBlockArray> PlacedBlockArray;
-
 
 	FTimerHandle GrassTimerHandle;
 

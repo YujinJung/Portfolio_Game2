@@ -21,7 +21,8 @@ void ACrosshairHUD::DrawHUD()
 	Super::DrawHUD();
 
 	const FVector2D Center(Canvas->ClipX * 0.5f, Canvas->ClipY * 0.5f);
-	const FVector2D CrosshairDrawPosition(Center.X, Center.Y + 20.f);
+	//const FVector2D CrosshairDrawPosition(Center.X - 5.f, Center.Y - 5.f);
+	const FVector2D CrosshairDrawPosition(Center.X, Center.Y);
 
 	FCanvasTileItem TileItem(CrosshairDrawPosition, CrosshairTex->Resource, FLinearColor::White);
 	TileItem.BlendMode = ESimpleElementBlendMode::SE_BLEND_Translucent;

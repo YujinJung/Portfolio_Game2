@@ -6,6 +6,14 @@
 #include "GameFramework/Actor.h"
 #include "VoxelBlock.generated.h"
 
+UENUM()
+enum class VoxelType : uint8 {
+	Empty,
+	Dirt,
+	Grass,
+	Rock,
+};
+
 UCLASS()
 class PORTFOLIO_GAME2_API AVoxelBlock : public AActor
 {
@@ -19,8 +27,6 @@ public:
 	// Sets default values for this actor's properties
 	AVoxelBlock();
 
-	AVoxelBlock(const FTransform& Tranform);
-
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
@@ -28,8 +34,12 @@ public:
 
 	void GenerateChunk(const FVector& PlayerLocation);
 
-	void UpdateMesh(const FVector& ChunkLocation);
+	void UpdateMesh();
+
+	FORCEINLINE const int32 GetChunkXYSize() const { return chunkXYSize; }
 	
+	void SetVoxel(FVector VoxelPos, VoxelType value);
+
 public:
 	UPROPERTY()
 	class UProceduralMeshComponent* BlockMeshComponent;
@@ -53,5 +63,8 @@ public:
 	
 	UPROPERTY()
 	TArray<int32> chunkElements;
+
+private:
+	class UMaterial* BlockMaterial;
 
 };

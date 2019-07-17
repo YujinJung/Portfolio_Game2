@@ -9,7 +9,7 @@
 /**
  * 
  */
-enum LandCubeState {
+enum class LandCubeState {
 	Dirt,
 	Grass
 };

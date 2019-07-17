@@ -81,29 +81,40 @@ void AMyCharacter::LookUpAtRate(float Rate)
 /*
  * DuplicateCheck ; 0 : no check / 1 : Block location duplicate check
  */
-bool AMyCharacter::CheckBlock(FHitResult &OutHit, uint8 DuplicateCheck = 0, FVector EndTrace = FVector::ZeroVector, FVector StartTrace = FVector::ZeroVector)
+bool AMyCharacter::CheckBlock(FHitResult &OutHit, FVector &HitLocation, int32 &index)
 {
 	FVector CamLocation;
 	FRotator CamRotation;
 	Controller->GetPlayerViewPoint(CamLocation, CamRotation);
 
 	const FVector Direction = CamRotation.Vector();
-	if (DuplicateCheck == 0)
-	{
-		EndTrace = CamLocation + Direction * 2000.f;
-	}
-	if (StartTrace == FVector::ZeroVector)
-	{
-		StartTrace = CamLocation;
-	}
+	
+	FVector	StartTrace = CamLocation;
+	FVector EndTrace = StartTrace + Direction * 1000.f;
 
 	FCollisionQueryParams TraceParams(FName(TEXT("TraceParams")), true, this);
 	TraceParams.bReturnPhysicalMaterial = true;
+
+	// Draw LineTrace
+	//const FName TraceTag("MyTraceTag");
+	//auto world = GetWorld();
+	//world->DebugDrawTraceTag = TraceTag;
+	//TraceParams.TraceTag = TraceTag;
+
 	GetWorld()->LineTraceSingleByChannel(OutHit, StartTrace, EndTrace, ECollisionChannel::ECC_WorldStatic, TraceParams);
 
 	if (OutHit.GetActor() != NULL)
 	{
-		return true;
+		FVector DirectionVector = (OutHit.Location - GetActorLocation()).GetSafeNormal();
+		HitLocation = OutHit.Location + DirectionVector;
+
+		const float x = floor(HitLocation.X / BlockSize);
+		const float y = floor(HitLocation.Y / BlockSize);
+		FVector2D HitChunk(x, y);
+
+		index = PlacedBlockCoord.Find(HitChunk);
+
+		return ((index != INDEX_NONE) ? true : false);
 	}
 	else
 	{
@@ -127,21 +138,22 @@ bool AMyCharacter::CheckBlockName(AActor* Block, const FString &CheckBlockName)
 }
 void AMyCharacter::PlaceBlock()
 {
-	FHitResult Hit(ForceInit);
-	AActor* HitBlock;
+	//FHitResult Hit(ForceInit);
+	//AActor* HitBlock;
 
-	auto MaxAbsoluteValue = [](float& a, float& b) -> float& {
-		using namespace MathFunc;
-		if (AbsoluteValue<float>(a) > AbsoluteValue<float>(b))
-		{
-			b = 0.f; return a;
-		}
-		else
-		{
-			a = 0.f; return b;
-		}
-	};
-	
+	//auto MaxAbsoluteValue = [](float& a, float& b) -> float& {
+	//	using namespace MathFunc;
+	//	if (AbsoluteValue<float>(a) > AbsoluteValue<float>(b))
+	//	{
+	//		b = 0.f; return a;
+	//	}
+	//	else
+	//	{
+	//		a = 0.f; return b;
+	//	}
+	//};
+	//
+	/*
 	if (CheckBlock(Hit))
 	{
 		HitBlock = Hit.GetActor();
@@ -159,23 +171,30 @@ void AMyCharacter::PlaceBlock()
 		FHitResult DuplicateHitResult;
 		if (!CheckBlock(DuplicateHitResult, 1, PlaceLocation))
 		{
-			GetWorld()->SpawnActor<ALandBlock>(PlaceLocation, Rotation);
+
 		}
 
-		if(CheckBlockName(HitBlock, FString(TEXT("LandBlock"))))
-		{
-			ALandBlock* LandBlock = Cast<ALandBlock>(HitBlock);
-			LandBlock->SetState(LandCubeState::Dirt);
-			LandBlock->SetGrassTime(0.f);
-			LandBlock->SetMaterial(BlockSurface::Top, TEXT("/Game/MinecraftContents/Materials/Block/M_Dirt"));
-			LandBlock->SetMaterial(BlockSurface::Side, TEXT("/Game/MinecraftContents/Materials/Block/M_Dirt"));
-		}
+	}
+	*/
+
+	FHitResult Hit;
+	FVector HitLocation;
+	int32 index;
+
+	UE_LOG(LogTemp, Warning, TEXT("Start"));
+	if (CheckBlock(Hit, HitLocation, index))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("In : %s"), *Hit.Normal.ToString());
+		FVector VoxelLocalPosition = Hit.Location - PlacedBlockArray[index]->GetActorLocation() + Hit.Normal;
+		PlacedBlockArray[index]->SetVoxel(VoxelLocalPosition, VoxelType::Rock);
+		UE_LOG(LogTemp, Warning, TEXT("End"));
 	}
 }
 void AMyCharacter::DestroyBlock()
 {
 	FHitResult Hit;
 
+	/*
 	if (CheckBlock(Hit))
 	{
 		const FVector HitBlockLocation = Hit.GetActor()->GetActorLocation();
@@ -198,48 +217,37 @@ void AMyCharacter::DestroyBlock()
 		//UE_LOG(LogTemp, Warning, TEXT("Destroy Block : %s"), *Location.ToString());
 		Hit.GetActor()->Destroy();
 	}
-}
-
-//float AMyCharacter::CalcDensity(float x, float y)
-//{
-//	static const float cliffScale = 1.0f;
-//	static const float noiseScale = 1.0f;
-//	float noise = SimplexNoiseLib->SimplexNoise2D(x, y);
-//	float cliff = (noise * 0.5f + 0.5f) * cliffScale;
-//	float density = (noise + cliff) * noiseScale;
-//
-//	return noise * noiseScale;
-//}
-//
-//void AMyCharacter::AddBlocks(FBlockArray& PlacedBlock)
-//{
-//	FVector BlockIndex(PlacedBlock.BlockIndex, 0.f);
-//	//float density = CalcDensity(BlockIndex.X * 0.01f, BlockIndex.Y * 0.01f);
-//	BlockIndex *= 100.f;
-//
-//	//if (density > 0)
-//		AVoxelBlock* SpawnBlock = GetWorld()->SpawnActor<AVoxelBlock>(BlockIndex, FRotator::ZeroRotator);
-//		PlacedBlock.PlacedBlock = SpawnBlock;
-//		PlacedBlock.flags = 0;
-//		PlacedBlockArray.Add(PlacedBlock);
-//}
-
-
-void AMyCharacter::RemoveBlock()
-{
-	int32 index = 0;
-
-	//for (auto& e : PlacedBlockArray)
-	for(int i = 0; i < PlacedBlockCoord.Num(); ++i)
+	*/
+	
+	/*if (CheckBlock(Hit))
 	{
-		const FVector BlockCoord(PlacedBlockCoord[i] * BlockSize, 0.f);
-		if (!CheckRadius(BlockCoord))
-		{
-			PlacedBlockArray[i]->Destroy();
-			PlacedBlockArray.RemoveAt(i);
-			PlacedBlockCoord.RemoveAt(i);
-		}
+		FVector DirectionVector = (Hit.Location - GetActorLocation()).GetSafeNormal();
+		FVector HitLocation = Hit.Location + DirectionVector;
+		float x = floor(HitLocation.X / BlockSize);
+		float y = floor(HitLocation.Y / BlockSize);
 
+		FVector2D HitChunk(x, y);
+
+		UE_LOG(LogTemp, Warning, TEXT("Hit : %s"), *Hit.Location.ToString());
+		UE_LOG(LogTemp, Warning, TEXT("Location : %s"), *HitChunk.ToString());
+		int index = PlacedBlockCoord.Find(HitChunk);
+		if (index != INDEX_NONE)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Destory"));
+			FVector VoxelLocalPosition = (Hit.Location + DirectionVector) - FVector(x, y, 0.f);
+
+			PlacedBlockArray[index]->SetVoxel(HitLocation, VoxelType::Empty);
+		}
+	}*/
+
+	FVector HitLocation;
+	int32 index;
+	if (CheckBlock(Hit, HitLocation, index))
+	{
+		//FVector VoxelLocalPosition = HitLocation - PlacedBlockArray[index]->GetActorLocation() + FVector(50.f, 50.f, 50.f);
+		FVector VoxelLocalPosition = HitLocation - PlacedBlockArray[index]->GetActorLocation();
+
+		PlacedBlockArray[index]->SetVoxel(VoxelLocalPosition, VoxelType::Empty);
 	}
 }
 
@@ -271,6 +279,23 @@ bool AMyCharacter::CheckRadius(const FVector& BlockCoord)
 	return false;
 }
 
+void AMyCharacter::RemoveBlock()
+{
+	int32 index = 0;
+
+	for (int i = 0; i < PlacedBlockCoord.Num(); ++i)
+	{
+		const FVector BlockCoord(PlacedBlockCoord[i] * BlockSize, 0.f);
+		if (!CheckRadius(BlockCoord))
+		{
+			PlacedBlockArray[i]->Destroy();
+			PlacedBlockArray.RemoveAt(i);
+			PlacedBlockCoord.RemoveAt(i);
+		}
+
+	}
+}
+
 void AMyCharacter::GenerateBlockMap()
 {
 	FVector PlayerLocation = GetActorLocation();
@@ -296,11 +321,7 @@ void AMyCharacter::GenerateBlockMap()
 					AVoxelBlock* SpawnBlock = GetWorld()->SpawnActor<AVoxelBlock>(FVector(CurrentIndex * BlockSize, 0.f), FRotator::ZeroRotator);
 					SpawnBlock->GenerateChunk(FVector(CurrentIndex, 0.f));
 					PlacedBlockCoord.Add(CurrentIndex);
-					PlacedBlockArray.Add(SpawnBlock);
-				}
-				else
-				{
-					//UE_LOG(LogTemp, Warning, TEXT("NO ADD: x : (%d, %d), (%d, %d)"), x, y, CurX, CurY);
+					PlacedBlockArray.Add(MoveTemp(SpawnBlock));
 				}
 			}
 
