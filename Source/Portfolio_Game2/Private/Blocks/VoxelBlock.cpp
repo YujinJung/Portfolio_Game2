@@ -62,14 +62,6 @@ float AVoxelBlock::CalcDensity(float x, float y, float z)
 	float density = (noise + cliff) * noiseScale + offset - z;
 	//UE_LOG(LogTemp, Warning, TEXT("Noise : %.4f"), noise);
 	return density;
-
-//	float scale = 4.f;
-//	float offset = 12.f;
-//
-//	float rawNoise = USimplexNoiseBPLibrary::SimplexNoise3D(x, y, z);
-//	float value = rawNoise * scale + offset - z;
-//
-//	return value;
 }
 
 void AVoxelBlock::GenerateChunk(const FVector& ChunkLocation)
@@ -85,7 +77,6 @@ void AVoxelBlock::GenerateChunk(const FVector& ChunkLocation)
 			{
 				int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
 
-				//float density = CalcDensity(ChunkLocation.X + (x * chunkXYSize), ChunkLocation.Y + (y * chunkXYSize), z);
 				float density = CalcDensity((ChunkLocation.X * chunkXYSize) + x, (ChunkLocation.Y * chunkXYSize) + y, z);
 
 				if (density >= 0.f)
@@ -104,10 +95,7 @@ void AVoxelBlock::GenerateChunk(const FVector& ChunkLocation)
 				{
 					chunkElements[index] = 0;
 				}
-				//chunkElements[index] = ((density) >= 0.f) ? 1 : 0;
-				//chunkElements[index] = 1;
 			}
-
 		}
 	}
 
@@ -264,7 +252,7 @@ void AVoxelBlock::UpdateMesh()
 	}
 }
 
-void AVoxelBlock::SetVoxel(FVector VoxelPos, VoxelType value)
+void AVoxelBlock::SetVoxel(FVector VoxelPos, EVoxelType value)
 {
 	// Round off
 	VoxelPos += FVector(voxelHalfSize, voxelHalfSize, voxelHalfSize);

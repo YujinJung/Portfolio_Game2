@@ -41,7 +41,6 @@ void AMyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	GenerateBlockMap();
-	//GetWorldTimerManager().SetTimer(GrassTimerHandle, this, &AMyCharacter::GenerateBlockMap, 1.f, true);
 }
 
 void AMyCharacter::MoveForward(float Value)
@@ -138,45 +137,6 @@ bool AMyCharacter::CheckBlockName(AActor* Block, const FString &CheckBlockName)
 }
 void AMyCharacter::PlaceBlock()
 {
-	//FHitResult Hit(ForceInit);
-	//AActor* HitBlock;
-
-	//auto MaxAbsoluteValue = [](float& a, float& b) -> float& {
-	//	using namespace MathFunc;
-	//	if (AbsoluteValue<float>(a) > AbsoluteValue<float>(b))
-	//	{
-	//		b = 0.f; return a;
-	//	}
-	//	else
-	//	{
-	//		a = 0.f; return b;
-	//	}
-	//};
-	//
-	/*
-	if (CheckBlock(Hit))
-	{
-		HitBlock = Hit.GetActor();
-		const FVector HitBlockLocation = HitBlock->GetActorLocation();
-		FVector PlaceDirection = Hit.Location - HitBlockLocation;
-		// TODO: Block Rotation check
-		const FRotator Rotation = FRotator::ZeroRotator;
-
-		// Vector; HitActor`s Center -> HitActor`s Hit Location 
-		// Set zero except largest coord value 
-		float& MaxValue = MaxAbsoluteValue(MaxAbsoluteValue(PlaceDirection.X, PlaceDirection.Y), PlaceDirection.Z);
-		FVector PlaceLocation = PlaceDirection * 2.0f + HitBlockLocation;
-
-		// Block Location Duplication Check
-		FHitResult DuplicateHitResult;
-		if (!CheckBlock(DuplicateHitResult, 1, PlaceLocation))
-		{
-
-		}
-
-	}
-	*/
-
 	FHitResult Hit;
 	FVector HitLocation;
 	int32 index;
@@ -186,7 +146,7 @@ void AMyCharacter::PlaceBlock()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("In : %s"), *Hit.Normal.ToString());
 		FVector VoxelLocalPosition = Hit.Location - PlacedBlockArray[index]->GetActorLocation() + Hit.Normal;
-		PlacedBlockArray[index]->SetVoxel(VoxelLocalPosition, VoxelType::Rock);
+		PlacedBlockArray[index]->SetVoxel(VoxelLocalPosition, EVoxelType::Rock);
 		UE_LOG(LogTemp, Warning, TEXT("End"));
 	}
 }
@@ -194,60 +154,13 @@ void AMyCharacter::DestroyBlock()
 {
 	FHitResult Hit;
 
-	/*
-	if (CheckBlock(Hit))
-	{
-		const FVector HitBlockLocation = Hit.GetActor()->GetActorLocation();
-
-		// Bottom Block Check
-		FHitResult BottomBlockHit;
-		const FVector HitBlockBottomLocation(HitBlockLocation.X, HitBlockLocation.Y, HitBlockLocation.Z - 100.f);
-		if (CheckBlock(BottomBlockHit, 1, HitBlockBottomLocation, HitBlockLocation))
-		{
-			AActor* BottomBlock = BottomBlockHit.GetActor();
-			if (CheckBlockName(BottomBlock, FString(TEXT("LandBlock"))))
-			{
-				// If Bottom Block is LandBlock, set the grass to grow.
-				ALandBlock* LandBlock = Cast<ALandBlock>(BottomBlock);
-				LandBlock->SetState(LandCubeState::Grass);
-				LandBlock->GrowTimer();
-			}
-		}
-
-		//UE_LOG(LogTemp, Warning, TEXT("Destroy Block : %s"), *Location.ToString());
-		Hit.GetActor()->Destroy();
-	}
-	*/
-	
-	/*if (CheckBlock(Hit))
-	{
-		FVector DirectionVector = (Hit.Location - GetActorLocation()).GetSafeNormal();
-		FVector HitLocation = Hit.Location + DirectionVector;
-		float x = floor(HitLocation.X / BlockSize);
-		float y = floor(HitLocation.Y / BlockSize);
-
-		FVector2D HitChunk(x, y);
-
-		UE_LOG(LogTemp, Warning, TEXT("Hit : %s"), *Hit.Location.ToString());
-		UE_LOG(LogTemp, Warning, TEXT("Location : %s"), *HitChunk.ToString());
-		int index = PlacedBlockCoord.Find(HitChunk);
-		if (index != INDEX_NONE)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Destory"));
-			FVector VoxelLocalPosition = (Hit.Location + DirectionVector) - FVector(x, y, 0.f);
-
-			PlacedBlockArray[index]->SetVoxel(HitLocation, VoxelType::Empty);
-		}
-	}*/
-
 	FVector HitLocation;
 	int32 index;
 	if (CheckBlock(Hit, HitLocation, index))
 	{
-		//FVector VoxelLocalPosition = HitLocation - PlacedBlockArray[index]->GetActorLocation() + FVector(50.f, 50.f, 50.f);
 		FVector VoxelLocalPosition = HitLocation - PlacedBlockArray[index]->GetActorLocation();
 
-		PlacedBlockArray[index]->SetVoxel(VoxelLocalPosition, VoxelType::Empty);
+		PlacedBlockArray[index]->SetVoxel(VoxelLocalPosition, EVoxelType::Empty);
 	}
 }
 
@@ -312,7 +225,6 @@ void AMyCharacter::GenerateBlockMap()
 			int CurY = y + j;
 
 			FVector2D CurrentIndex = FVector2D(CurX, CurY);
-			//int Index = ArrayFunc::Find<FVector2D>(PlacedBlockCoord, CurrentIndex);
 
 			if (!PlacedBlockCoord.Contains(CurrentIndex))
 			{

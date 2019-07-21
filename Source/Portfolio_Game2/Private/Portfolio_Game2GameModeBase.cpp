@@ -3,7 +3,7 @@
 
 #include "Portfolio_Game2GameModeBase.h"
 #include "ConstructorHelpers.h"
-#include "CrosshairHUD.h"
+#include "MainHUD.h"
 
 APortfolio_Game2GameModeBase::APortfolio_Game2GameModeBase()
 {
@@ -12,9 +12,9 @@ APortfolio_Game2GameModeBase::APortfolio_Game2GameModeBase()
 	{
 		DefaultPawnClass = PlayerPawn.Class;
 	}
-	static ConstructorHelpers::FClassFinder<ACrosshairHUD> CrosshairHUD(TEXT("/Game/Blueprints/Character/BP_CrosshairHUD"));
-	if (CrosshairHUD.Class != NULL)
+	static ConstructorHelpers::FClassFinder<AMainHUD> MainHUD(TEXT("/Game/Blueprints/UI/BP_MainHUD"));
+	if (MainHUD.Class != NULL)
 	{
-		HUDClass = CrosshairHUD.Class;
+		HUDClass = MainHUD.Class;
 	}
 }

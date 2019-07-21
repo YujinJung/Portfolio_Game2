@@ -7,7 +7,7 @@
 #include "VoxelBlock.generated.h"
 
 UENUM()
-enum class VoxelType : uint8 {
+enum class EVoxelType : uint8 {
 	Empty,
 	Dirt,
 	Grass,
@@ -38,7 +38,7 @@ public:
 
 	FORCEINLINE const int32 GetChunkXYSize() const { return chunkXYSize; }
 	
-	void SetVoxel(FVector VoxelPos, VoxelType value);
+	void SetVoxel(FVector VoxelPos, EVoxelType value);
 
 public:
 	UPROPERTY()

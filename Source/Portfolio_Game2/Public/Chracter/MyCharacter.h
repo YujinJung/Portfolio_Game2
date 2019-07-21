@@ -62,9 +62,6 @@ private:
 
 public:
 	// 0 - generate block / 1 - remove block
-	//int8 LockRemoveBlock;
-	//float CalcDensity(float x, float y);
-	//void AddBlocks(FBlockArray& PlacedBlock);
 	void RemoveBlock();
 	UFUNCTION()
 	void GenerateBlockMap();
