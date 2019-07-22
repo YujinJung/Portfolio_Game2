@@ -12,9 +12,6 @@ APortfolio_Game2GameModeBase::APortfolio_Game2GameModeBase()
 	{
 		DefaultPawnClass = PlayerPawn.Class;
 	}
-	static ConstructorHelpers::FClassFinder<AMainHUD> MainHUD(TEXT("/Game/Blueprints/UI/BP_MainHUD"));
-	if (MainHUD.Class != NULL)
-	{
-		HUDClass = MainHUD.Class;
-	}
+
+	HUDClass = AMainHUD::StaticClass();
 }

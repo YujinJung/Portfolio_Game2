@@ -41,6 +41,7 @@ void AMyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	GenerateBlockMap();
+
 }
 
 void AMyCharacter::MoveForward(float Value)

@@ -16,8 +16,9 @@ class PORTFOLIO_GAME2_API UMainUI : public UUserWidget
 
 public:
 	UMainUI(const FObjectInitializer& ObjectInitializer);
+	virtual void NativeConstruct() override;
 
 private:
-	class UTexture2D* QuickSlotTex;
-	
+	UPROPERTY()
+	class UImage* QuickSlotFocusImg;
 };

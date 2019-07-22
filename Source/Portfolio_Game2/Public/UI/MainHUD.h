@@ -9,10 +9,10 @@
 /**
  * 
  */
-
-enum class EHUDType : uint8 {
+enum EHUDType {
 	Crosshair,
 	QuickSlot,
+	Count
 };
 
 UCLASS()
@@ -22,12 +22,21 @@ class PORTFOLIO_GAME2_API AMainHUD : public AHUD
 
 public:
 	AMainHUD();
+	void Initialize();
+
+	void DrawItem(const FVector2D& DrawPosition, EHUDType e, const FVector2D& DrawItemInScreenSize = FVector2D(0.f, 0.f), const FVector2D& UVCoord0 = FVector2D(0.0f, 0.0f), const FVector2D& UVCoord1 = FVector2D(1.0f, 1.0f));
+
+	void DrawStaticItem();
+
+	//void DrawQSSelect(int QuickSlotNum);
+
+	virtual void DrawHUD() override;
+
+	virtual void BeginPlay() override;
+
 
 private:
-	void DrawItem(const FVector2D& DrawPosition, EHUDType e, const FVector2D& DrawItemInScreenSize, const FVector2D& UVCoord0, const FVector2D& UVCoord1);
-	virtual void DrawHUD() override;
+	TArray<class UTexture2D*> MainHUDTextureArray;
 	
-private:
-	TArray<class UTexture2D*> HUDTexArray;
-	ESimpleElementBlendMode BlendModd;
+
 };
