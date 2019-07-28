@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "VoxelBlock.h"
+#include "VoxelChunk.h"
 #include "SimplexNoiseBPLibrary.h"
 #include "ProceduralMeshComponent.h"
 #include "Materials/Material.h"
@@ -29,29 +29,29 @@ const FVector bMask[] = { FVector(0.000000, 0.000000, 1.000000),FVector(0.000000
 
 
 // Sets default values
-AVoxelBlock::AVoxelBlock()
+AVoxelChunk::AVoxelChunk()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	chunkZSize = 40;
-	chunkXYSize = 20;
+	chunkZSize = 50;
+	chunkXYSize = 16;
 	chunkXYSizeX2 = chunkXYSize * chunkXYSize;
 	chunkTotalSize = chunkXYSize * chunkXYSize * chunkZSize;
 
 	FString name = "Voxel_" + FString::FromInt(chunkXIndex) + "_" + FString::FromInt(chunkYIndex);
-	BlockMeshComponent = NewObject<UProceduralMeshComponent>(this, *name);
-	BlockMeshComponent->RegisterComponent();
+	VoxelMeshComponent = NewObject<UProceduralMeshComponent>(this, *name);
+	VoxelMeshComponent->RegisterComponent();
 
-	RootComponent = BlockMeshComponent;
+	RootComponent = VoxelMeshComponent;
 
 	voxelHalfSize = voxelSize / 2.f;
 
 	FString MaterialPath(TEXT("/Game/MinecraftContents/Materials/Block/M_Grass"));
-	BlockMaterial = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
+	VoxelMaterial = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
 }
 
-float AVoxelBlock::CalcDensity(float x, float y, float z)
+float AVoxelChunk::CalcDensity(float x, float y, float z)
 {
 	const float cliffScale = 7.f;
 	const float noiseScale = 3.f;
@@ -64,7 +64,7 @@ float AVoxelBlock::CalcDensity(float x, float y, float z)
 	return density;
 }
 
-void AVoxelBlock::GenerateChunk(const FVector& ChunkLocation)
+void AVoxelChunk::GenerateChunk(const FVector& ChunkLocation)
 {
 	chunkElements.SetNumUninitialized(chunkTotalSize);
 
@@ -102,7 +102,7 @@ void AVoxelBlock::GenerateChunk(const FVector& ChunkLocation)
 	UpdateMesh();
 }
 
-void AVoxelBlock::UpdateMesh()
+void AVoxelChunk::UpdateMesh()
 {
 	TArray<FVector> Vertices;
 	TArray<int32> Triangles;
@@ -112,7 +112,6 @@ void AVoxelBlock::UpdateMesh()
 	TArray<FProcMeshTangent> Tangents;
 
 	int32 elementID = 0;
-
 	for (int32 x = 0; x < chunkXYSize; ++x)
 	{
 		for (int32 y = 0; y < chunkXYSize; ++y)
@@ -126,7 +125,7 @@ void AVoxelBlock::UpdateMesh()
 					int triangleVerticeNum = 0;
 					for (int i = 0; i < 6; ++i)
 					{
-						// next or previous block for each side
+						// next or previous Voxel for each side
 						int newIndex = index + bMask[i].X + (bMask[i].Y * chunkXYSize) + (bMask[i].Z * chunkXYSizeX2);
 						
 						bool flag = true;
@@ -223,7 +222,7 @@ void AVoxelBlock::UpdateMesh()
 							auto density = CalcDensity(x, y, z);
 							FColor color(FColor(255, 255, 255, i));
 							
-							if(chunkElements[index] == 1 /* && check grass block */)
+							if(chunkElements[index] == 1 /* && check grass voxel */)
 							{
 								color.A = 1;
 							}
@@ -242,17 +241,17 @@ void AVoxelBlock::UpdateMesh()
 		}
 	}
 
-	BlockMeshComponent->ClearAllMeshSections();
+	VoxelMeshComponent->ClearAllMeshSections();
 
-	BlockMeshComponent->CreateMeshSection(0, Vertices, Triangles, Normals, UV, VertexColors, Tangents, true);
+	VoxelMeshComponent->CreateMeshSection(0, Vertices, Triangles, Normals, UV, VertexColors, Tangents, true);
 
-	if (BlockMaterial)
+	if (VoxelMaterial)
 	{
-		BlockMeshComponent->SetMaterial(0, BlockMaterial);
+		VoxelMeshComponent->SetMaterial(0, VoxelMaterial);
 	}
 }
 
-void AVoxelBlock::SetVoxel(FVector VoxelPos, EVoxelType value)
+void AVoxelChunk::SetVoxel(FVector VoxelPos, EVoxelType value)
 {
 	// Round off
 	VoxelPos += FVector(voxelHalfSize, voxelHalfSize, voxelHalfSize);
@@ -267,14 +266,13 @@ void AVoxelBlock::SetVoxel(FVector VoxelPos, EVoxelType value)
 }
 
 // Called when the game starts or when spawned
-void AVoxelBlock::BeginPlay()
+void AVoxelChunk::BeginPlay()
 {
 	Super::BeginPlay();
-
 }
 
 // Called every frame
-void AVoxelBlock::Tick(float DeltaTime)
+void AVoxelChunk::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 

@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "VoxelBlock.generated.h"
+#include "VoxelChunk.generated.h"
 
 UENUM()
 enum class EVoxelType : uint8 {
@@ -15,7 +15,7 @@ enum class EVoxelType : uint8 {
 };
 
 UCLASS()
-class PORTFOLIO_GAME2_API AVoxelBlock : public AActor
+class PORTFOLIO_GAME2_API AVoxelChunk : public AActor
 {
 	GENERATED_BODY()
 	
@@ -25,24 +25,30 @@ protected:
 
 public:	
 	// Sets default values for this actor's properties
-	AVoxelBlock();
+	AVoxelChunk();
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	float CalcDensity(float x, float y, float z);
 
+	UFUNCTION(BlueprintCallable, Category = Voxel)
 	void GenerateChunk(const FVector& PlayerLocation);
 
+	UFUNCTION(BlueprintCallable, Category = Voxel)
 	void UpdateMesh();
 
-	FORCEINLINE const int32 GetChunkXYSize() const { return chunkXYSize; }
-	
+	UFUNCTION(BlueprintCallable, Category = Voxel)
 	void SetVoxel(FVector VoxelPos, EVoxelType value);
 
-public:
+	FORCEINLINE const int32 GetChunkXYSize() const { return chunkXYSize; }
+
+private:
 	UPROPERTY()
-	class UProceduralMeshComponent* BlockMeshComponent;
+	class UProceduralMeshComponent* VoxelMeshComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
+	class UMaterial* VoxelMaterial;
 
 	UPROPERTY(EditAnywhere)
 	int32 chunkZSize;
@@ -63,8 +69,4 @@ public:
 	
 	UPROPERTY()
 	TArray<int32> chunkElements;
-
-private:
-	class UMaterial* BlockMaterial;
-
 };

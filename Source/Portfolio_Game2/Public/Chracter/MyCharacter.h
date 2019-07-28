@@ -4,11 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "BlockArray.h"
 #include "MyCharacter.generated.h"
 
-class AVoxelBlock;
-
+class AVoxelChunk;
 
 UCLASS()
 class PORTFOLIO_GAME2_API AMyCharacter : public ACharacter
@@ -41,33 +39,42 @@ protected:
 	// Mouse Movement
 	void TurnAtRate(float Rate);
 	void LookUpAtRate(float Rate);
-	
-private:
-	// Create / Destroy Block
-	bool CheckBlock(FHitResult& OutHit, FVector& HitLocation, int32& index);
-	bool CheckBlockName(AActor* Block, const FString& CheckBlockName);
-	void PlaceBlock();
-	void DestroyBlock();
 
 
 private:
-	const int BlockRange = 6;
-	float BlockSize = 2000;
-	UPROPERTY()
-		TArray<FVector2D> PlacedBlockCoord;
-	UPROPERTY()
-		TArray<AVoxelBlock*> PlacedBlockArray;
+	FTimerHandle MapLoadTimerHandle;
 
-	FTimerHandle GrassTimerHandle;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))
+	int ChunkRange;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))
+	int ChunkRangeX2;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))
+	float ChunkSize;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))
+	TArray<FVector2D> ChunkCoordArray;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))
+	TArray<AVoxelChunk*> ChunkArray;
+
+private:
+	//bool CheckBlockName(AActor* Block, const FString& CheckBlockName);
+	FORCEINLINE float CalcBlockNumber(const float& a) { return ((a + (ChunkSize * 0.5f)) / 100.f); };
 
 public:
-	// 0 - generate block / 1 - remove block
-	void RemoveBlock();
-	UFUNCTION()
-	void GenerateBlockMap();
-	bool CheckRadius(const FVector& BlockCoord);
+	// Create / Update / Destory Chunk
+	UFUNCTION(BlueprintCallable, Category = Chunk)
+	void GenerateChunkMap();
+	UFUNCTION(BlueprintCallable, Category = Chunk)
+	void RemoveChunk();
+	UFUNCTION(BlueprintCallable, Category = Chunk)
+	bool CheckRadius(const FVector& ChunkCoord);
 
-	FORCEINLINE float CalcBlockNumber(const float& a) { return ((a + (BlockSize * 0.5f)) / 100.f); };
+	// Place / Destroy Voxel 
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	void PlaceVoxel();
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	void DestroyVoxel();
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	bool CheckVoxel(FHitResult& OutHit, FVector& HitLocation, int32& index);
 
 public:	
 	// Called every frame

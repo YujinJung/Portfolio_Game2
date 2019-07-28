@@ -6,11 +6,9 @@
 #include "GameFramework/Controller.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
-#include "LandBlock.h"
 #include "TimerManager.h"
 #include "MathFunc.h"
-#include "VoxelBlock.h"
-#include "Vector2D.h"
+#include "VoxelChunk.h"
 
 AMyCharacter::AMyCharacter()
 {
@@ -23,6 +21,7 @@ AMyCharacter::AMyCharacter()
 	GetCharacterMovement()->JumpZVelocity = 400.f;
 	GetCharacterMovement()->AirControl = 0.2f;
 
+	// Camera
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("Camera Boom"));
 	CameraBoom->AttachTo(RootComponent);
 	CameraBoom->TargetArmLength = 50.f;
@@ -32,7 +31,12 @@ AMyCharacter::AMyCharacter()
 	FollowCamera->AttachTo(CameraBoom, CameraBoom->SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Voxel Size
+	ChunkRange = 16;
+	ChunkRangeX2 = ChunkRange * 2;
+	ChunkSize = ChunkRange * 100.f;
+
+	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 }
 
@@ -40,8 +44,7 @@ AMyCharacter::AMyCharacter()
 void AMyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	GenerateBlockMap();
-
+	GetWorldTimerManager().SetTimer(MapLoadTimerHandle, this, &AMyCharacter::GenerateChunkMap, 0.1f, true);
 }
 
 void AMyCharacter::MoveForward(float Value)
@@ -79,16 +82,157 @@ void AMyCharacter::LookUpAtRate(float Rate)
 }
 
 /*
- * DuplicateCheck ; 0 : no check / 1 : Block location duplicate check
+ * Generate and Update Chunk
+ * (x, y) ++ -- -+ +-
  */
-bool AMyCharacter::CheckBlock(FHitResult &OutHit, FVector &HitLocation, int32 &index)
+void AMyCharacter::GenerateChunkMap()
+{
+	static int x_i = 0; // 0 1 2 3 ... ChunkRange 0 1 2 ... 
+	static int y_i = 1; // 1 -1 1 -1
+	static int g_i = 1; // odd even check
+
+	// -ChunkRange ~ 0 | 0 ~ ChunkRange
+	int yStart = (y_i == -1) ? -ChunkRange : 0;
+	int yEnd = yStart + ChunkRange;
+	if (x_i == 0)
+	{
+		yStart = -ChunkRange;
+		yEnd = ChunkRange;
+	}
+
+	FVector PlayerLocation = GetActorLocation();
+	PlayerLocation /= ChunkSize;
+
+	const int x = floor(PlayerLocation.X);
+	const int y = floor(PlayerLocation.Y);
+
+	//for (int j = -ChunkRange; j <= ChunkRange; ++j)
+	for (int j = yStart; j <= yEnd; ++j)
+	{
+		int CurX = x + x_i;
+		int CurY = y + j;
+
+		FVector2D CurrentIndex = FVector2D(CurX, CurY);
+
+		if (!ChunkCoordArray.Contains(CurrentIndex))
+		{
+			if (CheckRadius(FVector(CurrentIndex * ChunkSize, 0.f)))
+			{
+				AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(CurrentIndex * ChunkSize, 0.f), FRotator::ZeroRotator);
+
+				SpawnChunk->GenerateChunk(FVector(CurrentIndex, 0.f));
+
+				ChunkCoordArray.Add(CurrentIndex);
+				ChunkArray.Add(MoveTemp(SpawnChunk));
+			}
+		}
+	}
+
+	RemoveChunk();
+
+	// next chunk
+	{
+		// ++ -- -+ +- ++
+		if (x_i == 0)
+		{
+			x_i += 1;
+			return;
+		}
+		else if (g_i == 1) // multiply x and y by -1
+		{
+			x_i *= -1;
+			y_i *= -1;
+			g_i *= -1;
+		}
+		else if (g_i == -1) // multiply y by -1 // if x_i is positive, increase 1.
+		{
+			y_i *= -1;
+			g_i *= -1;
+
+			if ((x_i >= 1) && (y_i == 1))
+			{
+				x_i = (x_i + 1) % ChunkRange;
+			}
+		}
+
+		//x_i = (((x_i + ChunkRange) + 1) % (ChunkRangeX2 + 1)) - ChunkRange;
+	}
+}
+
+void AMyCharacter::RemoveChunk()
+{
+	int32 index = 0;
+
+	for (int i = 0; i < ChunkCoordArray.Num(); ++i)
+	{
+		const FVector CurrnetChunkCoord(ChunkCoordArray[i] * ChunkSize, 0.f);
+		if (!CheckRadius(CurrnetChunkCoord))
+		{
+			ChunkArray[i]->Destroy();
+			ChunkArray.RemoveAt(i);
+			ChunkCoordArray.RemoveAt(i);
+		}
+	}
+}
+
+bool AMyCharacter::CheckRadius(const FVector& ChunkCoord)
+{
+	const float maxLength = ChunkSize * ChunkRange;
+
+	FVector PlayerLocation = GetActorLocation();
+
+	PlayerLocation.Z = 0.f;
+
+	PlayerLocation /= ChunkSize;
+	PlayerLocation.X = floor(PlayerLocation.X);
+	PlayerLocation.Y = floor(PlayerLocation.Y);
+	PlayerLocation *= ChunkSize;
+
+	// Vector between player and chunk
+	const FVector PlayerChunkVector = ChunkCoord - PlayerLocation;
+	const float vectorLength = PlayerChunkVector.Size();
+
+	if (vectorLength <= maxLength)
+		return true;
+
+	return false;
+}
+
+void AMyCharacter::PlaceVoxel()
+{
+	FHitResult Hit;
+	FVector HitLocation;
+	int32 index;
+
+	if (CheckVoxel(Hit, HitLocation, index))
+	{
+		FVector VoxelLocalLocation = Hit.Location - ChunkArray[index]->GetActorLocation() + Hit.Normal;
+		ChunkArray[index]->SetVoxel(VoxelLocalLocation, EVoxelType::Rock);
+	}
+}
+
+void AMyCharacter::DestroyVoxel()
+{
+	FHitResult Hit;
+
+	FVector HitLocation;
+	int32 index;
+	if (CheckVoxel(Hit, HitLocation, index))
+	{
+		FVector VoxelLocalLocation = HitLocation - ChunkArray[index]->GetActorLocation();
+
+		ChunkArray[index]->SetVoxel(VoxelLocalLocation, EVoxelType::Empty);
+	}
+}
+
+bool AMyCharacter::CheckVoxel(FHitResult& OutHit, FVector& HitLocation, int32& index)
 {
 	FVector CamLocation;
 	FRotator CamRotation;
 	Controller->GetPlayerViewPoint(CamLocation, CamRotation);
 
 	const FVector Direction = CamRotation.Vector();
-	
+
 	FVector	StartTrace = CamLocation;
 	FVector EndTrace = StartTrace + Direction * 1000.f;
 
@@ -108,11 +252,11 @@ bool AMyCharacter::CheckBlock(FHitResult &OutHit, FVector &HitLocation, int32 &i
 		FVector DirectionVector = (OutHit.Location - GetActorLocation()).GetSafeNormal();
 		HitLocation = OutHit.Location + DirectionVector;
 
-		const float x = floor(HitLocation.X / BlockSize);
-		const float y = floor(HitLocation.Y / BlockSize);
+		const float x = floor(HitLocation.X / ChunkSize);
+		const float y = floor(HitLocation.Y / ChunkSize);
 		FVector2D HitChunk(x, y);
 
-		index = PlacedBlockCoord.Find(HitChunk);
+		index = ChunkCoordArray.Find(HitChunk);
 
 		return ((index != INDEX_NONE) ? true : false);
 	}
@@ -121,148 +265,27 @@ bool AMyCharacter::CheckBlock(FHitResult &OutHit, FVector &HitLocation, int32 &i
 		return false;
 	}
 }
-bool AMyCharacter::CheckBlockName(AActor* Block, const FString &CheckBlockName)
-{
-	// LandBlock_number
-	FString BlockName = Block->GetName();
-	TArray<FString> OutArray;
-	BlockName.ParseIntoArray(OutArray, TEXT("_"));
-	BlockName = OutArray[0];
-	UE_LOG(LogTemp, Warning, TEXT("%s"), *BlockName);
-
-	if (BlockName.Equals(CheckBlockName))
-	{
-		return true;
-	}
-	return false;
-}
-void AMyCharacter::PlaceBlock()
-{
-	FHitResult Hit;
-	FVector HitLocation;
-	int32 index;
-
-	UE_LOG(LogTemp, Warning, TEXT("Start"));
-	if (CheckBlock(Hit, HitLocation, index))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("In : %s"), *Hit.Normal.ToString());
-		FVector VoxelLocalPosition = Hit.Location - PlacedBlockArray[index]->GetActorLocation() + Hit.Normal;
-		PlacedBlockArray[index]->SetVoxel(VoxelLocalPosition, EVoxelType::Rock);
-		UE_LOG(LogTemp, Warning, TEXT("End"));
-	}
-}
-void AMyCharacter::DestroyBlock()
-{
-	FHitResult Hit;
-
-	FVector HitLocation;
-	int32 index;
-	if (CheckBlock(Hit, HitLocation, index))
-	{
-		FVector VoxelLocalPosition = HitLocation - PlacedBlockArray[index]->GetActorLocation();
-
-		PlacedBlockArray[index]->SetVoxel(VoxelLocalPosition, EVoxelType::Empty);
-	}
-}
-
-// 1 2 3 4 5 6 7 8 9
-// 0 x 0 x x 0 x
-// 1 1 1 1 1 1 1
-// 2 1 2 1 1 2 1 2 2
-// 1 0 1 0 0 1 0 1 1
-
-bool AMyCharacter::CheckRadius(const FVector& BlockCoord)
-{
-	const float maxLength = BlockSize * BlockRange;
-
-	FVector PlayerLocation = GetActorLocation();
-
-	PlayerLocation.Z = 0.f;
-
-	PlayerLocation /= BlockSize;
-	PlayerLocation.X = floor(PlayerLocation.X);
-	PlayerLocation.Y = floor(PlayerLocation.Y);
-	PlayerLocation *= BlockSize;
-
-	const FVector PlayerBlockVector = BlockCoord - PlayerLocation;
-	const float vectorLength = PlayerBlockVector.Size();
-
-	if (vectorLength <= maxLength)
-		return true;
-
-	return false;
-}
-
-void AMyCharacter::RemoveBlock()
-{
-	int32 index = 0;
-
-	for (int i = 0; i < PlacedBlockCoord.Num(); ++i)
-	{
-		const FVector BlockCoord(PlacedBlockCoord[i] * BlockSize, 0.f);
-		if (!CheckRadius(BlockCoord))
-		{
-			PlacedBlockArray[i]->Destroy();
-			PlacedBlockArray.RemoveAt(i);
-			PlacedBlockCoord.RemoveAt(i);
-		}
-
-	}
-}
-
-void AMyCharacter::GenerateBlockMap()
-{
-	FVector PlayerLocation = GetActorLocation();
-	PlayerLocation /= BlockSize;
-
-	int x = floor(PlayerLocation.X);
-	int y = floor(PlayerLocation.Y);
-
-	for (int i = -BlockRange; i <= BlockRange; ++i)
-	{
-		for (int j = -BlockRange; j <= BlockRange; ++j)
-		{
-			int CurX = x + i;
-			int CurY = y + j;
-
-			FVector2D CurrentIndex = FVector2D(CurX, CurY);
-
-			if (!PlacedBlockCoord.Contains(CurrentIndex))
-			{
-				if (CheckRadius(FVector(CurrentIndex * BlockSize, 0.f)))
-				{
-					AVoxelBlock* SpawnBlock = GetWorld()->SpawnActor<AVoxelBlock>(FVector(CurrentIndex * BlockSize, 0.f), FRotator::ZeroRotator);
-					SpawnBlock->GenerateChunk(FVector(CurrentIndex, 0.f));
-					PlacedBlockCoord.Add(CurrentIndex);
-					PlacedBlockArray.Add(MoveTemp(SpawnBlock));
-				}
-			}
-
-		}
-	}
-	RemoveBlock();
-}
 
 // Called every frame
 void AMyCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	GenerateBlockMap();
 }
 
 // Called to bind functionality to input
 void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	//Super::SetupPlayerInputComponent(PlayerInputComponent);
+	check(PlayerInputComponent);
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
-	PlayerInputComponent->BindAction("LClick", IE_Pressed, this, &AMyCharacter::DestroyBlock);
-	PlayerInputComponent->BindAction("RClick", IE_Pressed, this, &AMyCharacter::PlaceBlock);
+	PlayerInputComponent->BindAction("LClick", IE_Pressed, this, &AMyCharacter::DestroyVoxel);
+	PlayerInputComponent->BindAction("RClick", IE_Pressed, this, &AMyCharacter::PlaceVoxel);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AMyCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AMyCharacter::MoveRight);
-	
+
 	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("TurnAtRate", this, &AMyCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
