@@ -33,10 +33,17 @@ ADestroyedVoxel::ADestroyedVoxel()
 
 	FString name = "Voxel_Destroyed";
 	VoxelMeshComponent = NewObject<UProceduralMeshComponent>(this, *name);
-	VoxelMeshComponent->SetSimulatePhysics(false);
-	VoxelMeshComponent->SetCollisionObjectType(ECollisionChannel::ECC_Visibility);
-	VoxelMeshComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
-	VoxelMeshComponent->SetEnableGravity(true);
+
+	
+	VoxelMeshComponent->SetSimulatePhysics(true);
+	VoxelMeshComponent->SetMobility(EComponentMobility::Movable);
+	VoxelMeshComponent->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
+	VoxelMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	VoxelMeshComponent->SetCollisionProfileName(TEXT("DestroyPhysics"));
+	VoxelMeshComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
+	VoxelMeshComponent->bUseComplexAsSimpleCollision = false;
+	//VoxelMeshComponent->SetEnableGravity(true);
+
 	VoxelMeshComponent->RegisterComponent();
 	RootComponent = VoxelMeshComponent;
 
