@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Portfolio_Game2_Common.h"
 #include "MyCharacter.generated.h"
 
 class AVoxelChunk;
@@ -40,7 +41,6 @@ protected:
 	void TurnAtRate(float Rate);
 	void LookUpAtRate(float Rate);
 
-
 private:
 	FTimerHandle MapLoadTimerHandle;
 
@@ -54,6 +54,10 @@ private:
 	TArray<FVector2D> ChunkCoordArray;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))
 	TArray<AVoxelChunk*> ChunkArray;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
+	TArray<EVoxelType> QuickSlotVoxelTypeArray;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
+	EVoxelType CurrentVoxelType;
 
 private:
 	//bool CheckBlockName(AActor* Block, const FString& CheckBlockName);
@@ -75,6 +79,15 @@ public:
 	void DestroyVoxel();
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	bool CheckVoxel(FHitResult& OutHit, FVector& HitLocation, int32& index);
+
+	UFUNCTION(BlueprintPure, Category = Voxel)
+	FORCEINLINE EVoxelType GetCurrentVoxelType() const { return CurrentVoxelType; }
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	void SetVoxelType(int32 index);
+	UFUNCTION(BlueprintPure, Category = Voxel)
+	FORCEINLINE TArray<EVoxelType> GetQuickSlotVoxelTypeArray() const { return QuickSlotVoxelTypeArray; }
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	void SetQuickSlotVoxelTypeArray(EVoxelType inVoxelType, int32 index);
 
 public:	
 	// Called every frame

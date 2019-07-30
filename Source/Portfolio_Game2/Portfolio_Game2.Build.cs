@@ -8,7 +8,7 @@ public class Portfolio_Game2 : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "ProceduralMeshComponent", "Paper2D", "UMG" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "RenderCore", "ProceduralMeshComponent", "Paper2D", "UMG" });
 
 
         // Uncomment if you are using Slate UI

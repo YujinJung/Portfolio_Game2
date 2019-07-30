@@ -4,15 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Portfolio_Game2_Common.h"
 #include "VoxelChunk.generated.h"
-
-UENUM()
-enum class EVoxelType : uint8 {
-	Empty,
-	Dirt,
-	Grass,
-	Rock,
-};
 
 UCLASS()
 class PORTFOLIO_GAME2_API AVoxelChunk : public AActor
@@ -48,7 +41,7 @@ private:
 	class UProceduralMeshComponent* VoxelMeshComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
-	class UMaterial* VoxelMaterial;
+	class UMaterial* VoxelMaterials;
 
 	UPROPERTY(EditAnywhere)
 	int32 chunkZSize;

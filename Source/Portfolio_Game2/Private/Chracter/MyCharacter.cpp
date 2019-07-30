@@ -7,7 +7,6 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
 #include "TimerManager.h"
-#include "MathFunc.h"
 #include "VoxelChunk.h"
 
 AMyCharacter::AMyCharacter()
@@ -45,6 +44,11 @@ void AMyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	GetWorldTimerManager().SetTimer(MapLoadTimerHandle, this, &AMyCharacter::GenerateChunkMap, 0.1f, true);
+
+	// Voxel Type
+	//QuickSlotVoxelTypeArray.SetNumUninitialized(9);
+	QuickSlotVoxelTypeArray.Init(EVoxelType::Empty, 9);
+	CurrentVoxelType = QuickSlotVoxelTypeArray[0];
 }
 
 void AMyCharacter::MoveForward(float Value)
@@ -159,6 +163,9 @@ void AMyCharacter::GenerateChunkMap()
 	}
 }
 
+/*
+ * Check Radius and Remove Chunk that are out of range.
+ */
 void AMyCharacter::RemoveChunk()
 {
 	int32 index = 0;
@@ -198,8 +205,17 @@ bool AMyCharacter::CheckRadius(const FVector& ChunkCoord)
 	return false;
 }
 
+
+/*
+ * Place Voxel by CurrentVoxelType(QuickSlot)
+ */
 void AMyCharacter::PlaceVoxel()
 {
+	if ((CurrentVoxelType == EVoxelType::Empty) || (CurrentVoxelType == EVoxelType::Count))
+	{
+		return;
+	}
+
 	FHitResult Hit;
 	FVector HitLocation;
 	int32 index;
@@ -207,7 +223,7 @@ void AMyCharacter::PlaceVoxel()
 	if (CheckVoxel(Hit, HitLocation, index))
 	{
 		FVector VoxelLocalLocation = Hit.Location - ChunkArray[index]->GetActorLocation() + Hit.Normal;
-		ChunkArray[index]->SetVoxel(VoxelLocalLocation, EVoxelType::Rock);
+		ChunkArray[index]->SetVoxel(VoxelLocalLocation, CurrentVoxelType);
 	}
 }
 
@@ -263,6 +279,22 @@ bool AMyCharacter::CheckVoxel(FHitResult& OutHit, FVector& HitLocation, int32& i
 	else
 	{
 		return false;
+	}
+}
+
+void AMyCharacter::SetVoxelType(int32 index)
+{
+	if ((0 <= index) && (index <= 9))
+	{
+		CurrentVoxelType = QuickSlotVoxelTypeArray[index];
+	}
+}
+
+void AMyCharacter::SetQuickSlotVoxelTypeArray(EVoxelType inVoxelType, int32 index)
+{
+	if ((0 <= index) && (index <= 9))
+	{
+		QuickSlotVoxelTypeArray[index] = inVoxelType;
 	}
 }
 

@@ -47,8 +47,8 @@ AVoxelChunk::AVoxelChunk()
 
 	voxelHalfSize = voxelSize / 2.f;
 
-	FString MaterialPath(TEXT("/Game/MinecraftContents/Materials/Block/M_Grass"));
-	VoxelMaterial = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
+	FString MaterialPath(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Grass"));
+	VoxelMaterials = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
 }
 
 float AVoxelChunk::CalcDensity(float x, float y, float z)
@@ -220,13 +220,9 @@ void AVoxelChunk::UpdateMesh()
 							UV.Append(bUVs, ARRAY_COUNT(bUVs));
 
 							auto density = CalcDensity(x, y, z);
-							FColor color(FColor(255, 255, 255, i));
-							
-							if(chunkElements[index] == 1 /* && check grass voxel */)
-							{
-								color.A = 1;
-							}
-
+							// red = 1 -> Grass
+							FColor color(FColor(chunkElements[index], 255, 255, i));
+													
 							for (int j = 0; j < 4; ++j)
 							{
 								VertexColors.Add(color);
@@ -245,9 +241,9 @@ void AVoxelChunk::UpdateMesh()
 
 	VoxelMeshComponent->CreateMeshSection(0, Vertices, Triangles, Normals, UV, VertexColors, Tangents, true);
 
-	if (VoxelMaterial)
+	if (VoxelMaterials)
 	{
-		VoxelMeshComponent->SetMaterial(0, VoxelMaterial);
+		VoxelMeshComponent->SetMaterial(0, VoxelMaterials);
 	}
 }
 
