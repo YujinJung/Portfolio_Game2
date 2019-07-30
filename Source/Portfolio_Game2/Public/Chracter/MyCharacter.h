@@ -8,6 +8,7 @@
 #include "MyCharacter.generated.h"
 
 class AVoxelChunk;
+class ADestroyedVoxel;
 
 UCLASS()
 class PORTFOLIO_GAME2_API AMyCharacter : public ACharacter
@@ -54,6 +55,8 @@ private:
 	TArray<FVector2D> ChunkCoordArray;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))
 	TArray<AVoxelChunk*> ChunkArray;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
+	TArray<ADestroyedVoxel*> DestroyedVoxelArray;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
 	TArray<EVoxelType> QuickSlotVoxelTypeArray;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))

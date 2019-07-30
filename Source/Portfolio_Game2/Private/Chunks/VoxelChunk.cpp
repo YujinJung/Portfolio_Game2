@@ -45,9 +45,10 @@ AVoxelChunk::AVoxelChunk()
 
 	RootComponent = VoxelMeshComponent;
 
-	voxelHalfSize = voxelSize / 2.f;
+	voxelSize = 100;
+	voxelHalfSize = voxelSize / 2;
 
-	FString MaterialPath(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Grass"));
+	FString MaterialPath(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Voxel"));
 	VoxelMaterials = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
 }
 
@@ -247,16 +248,23 @@ void AVoxelChunk::UpdateMesh()
 	}
 }
 
-void AVoxelChunk::SetVoxel(FVector VoxelPos, EVoxelType value)
+/*
+ * Set Voxel
+ * @param VoxelLocation - Voxel Location
+ * @param value			- Set Voxel Type / Return Voxel original type
+ */
+void AVoxelChunk::SetVoxel(FVector VoxelLocation, EVoxelType& value)
 {
 	// Round off
-	VoxelPos += FVector(voxelHalfSize, voxelHalfSize, voxelHalfSize);
-	int32 x = VoxelPos.X / voxelSize;
-	int32 y = VoxelPos.Y / voxelSize;
-	int32 z = VoxelPos.Z / voxelSize;
+	VoxelLocation += FVector(voxelHalfSize, voxelHalfSize, voxelHalfSize);
+	int32 x = VoxelLocation.X / voxelSize;
+	int32 y = VoxelLocation.Y / voxelSize;
+	int32 z = VoxelLocation.Z / voxelSize;
 
 	int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
+	EVoxelType ret = static_cast<EVoxelType>(chunkElements[index]);
 	chunkElements[index] = static_cast<int32>(value);
+	value = ret;
 
 	UpdateMesh();
 }

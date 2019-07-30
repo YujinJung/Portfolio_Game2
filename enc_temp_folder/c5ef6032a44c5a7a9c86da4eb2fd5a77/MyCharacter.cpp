@@ -241,6 +241,8 @@ void AMyCharacter::DestroyVoxel()
 		EVoxelType DestroyedVoxelType = EVoxelType::Empty;
 		ChunkArray[index]->SetVoxel(VoxelLocalLocation, DestroyedVoxelType);
 
+
+		UE_LOG(LogTemp, Warning, TEXT("xyz (%s)"), *HitLocation.ToString());
 		ADestroyedVoxel* DestroyedVoxel= GetWorld()->SpawnActor<ADestroyedVoxel>(HitLocation, FRotator::ZeroRotator);
 		DestroyedVoxel->GenerateVoxel(HitLocation, DestroyedVoxelType);
 		DestroyedVoxelArray.Add(MoveTemp(DestroyedVoxel));
@@ -271,9 +273,6 @@ bool AMyCharacter::CheckVoxel(FHitResult& OutHit, FVector& HitLocation, int32& i
 
 	if (OutHit.GetActor() != NULL)
 	{
-		/*if (!OutHit.GetActor()->GetClass()->IsChildOf(AVoxelChunk::StaticClass()))
-			return false;*/
-
 		FVector DirectionVector = (OutHit.Location - GetActorLocation()).GetSafeNormal();
 		HitLocation = OutHit.Location + DirectionVector;
 

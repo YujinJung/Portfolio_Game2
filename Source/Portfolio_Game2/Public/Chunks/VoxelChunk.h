@@ -32,7 +32,7 @@ public:
 	void UpdateMesh();
 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	void SetVoxel(FVector VoxelPos, EVoxelType value);
+	void SetVoxel(FVector VoxelPos, EVoxelType& value);
 
 	FORCEINLINE const int32 GetChunkXYSize() const { return chunkXYSize; }
 
@@ -56,7 +56,7 @@ private:
 	UPROPERTY()
 	int32 chunkYIndex;
 	UPROPERTY()
-	int32 voxelSize = 100;
+		int32 voxelSize;
 	UPROPERTY()
 	int32 voxelHalfSize;
 	
