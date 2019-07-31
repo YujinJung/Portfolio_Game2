@@ -30,36 +30,110 @@ ADestroyedVoxel::ADestroyedVoxel()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
 
 	FString name = "Voxel_Destroyed";
 	VoxelMeshComponent = NewObject<UProceduralMeshComponent>(this, *name);
-
 	
-	VoxelMeshComponent->SetSimulatePhysics(true);
-	VoxelMeshComponent->SetMobility(EComponentMobility::Movable);
-	VoxelMeshComponent->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
-	VoxelMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	VoxelMeshComponent->SetCollisionProfileName(TEXT("DestroyPhysics"));
-	VoxelMeshComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
-	VoxelMeshComponent->bUseComplexAsSimpleCollision = false;
-	//VoxelMeshComponent->SetEnableGravity(true);
+	VoxelMeshComponent->SetCollisionObjectType(ECollisionChannel::ECC_Visibility);
+	VoxelMeshComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 
 	VoxelMeshComponent->RegisterComponent();
 	RootComponent = VoxelMeshComponent;
 
-	voxelSize = 30;
+	voxelSize = 15;
 	voxelHalfSize = voxelSize / 2;
+	originalVoxelHalfSize = 50.f;
+	RunningTime = 0.f;
+	sinScale = 1.f;
 
 	FString MaterialPath(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Voxel"));
 	VoxelMaterials = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
 }
 
-// Called every frame
+
+void ADestroyedVoxel::BeginPlay()
+{
+	Super::BeginPlay();
+}
+
+/* 
+ * Called every frame
+ * @ floating voxel
+ * @ move downward
+ */
 void ADestroyedVoxel::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	FVector DestroyedVoxelLocation = GetActorLocation();
+	/* floating voxel */
+	if (!isDown)
+	{
+		float deltaHeight = sin(DeltaTime + RunningTime) - sin(RunningTime);
+
+		DestroyedVoxelLocation.Z += deltaHeight * 10.f;
+		SetActorLocation(DestroyedVoxelLocation);
+
+		RunningTime += DeltaTime;
+
+		CheckGravity();
+	}
+	else /* move downward */
+	{
+		float deltaHeight = sinScale * (sin(DeltaTime + DownRunningTime) - sin(DownRunningTime));
+
+		DestroyedVoxelLocation.Z += deltaHeight * 20.f;
+		SetActorLocation(DestroyedVoxelLocation);
+
+		DownRunningTime += DeltaTime;
+
+		if (DestroyedVoxelLocation.Z <= BaseLocation.Z)
+		{
+			isDown = false;
+		}
+	}
+
+	/* TODO: DELETE after life time */
 }
+
+/*
+ * Check Gravity and Move downward Setting
+ */
+void ADestroyedVoxel::CheckGravity()
+{
+	FHitResult Hit;
+	FVector Direction(0.0f, 0.0f, -1.0f);
+	FVector	StartTrace = BaseLocation;
+	FVector EndTrace = StartTrace + Direction * 1000.f;
+
+	FCollisionQueryParams TraceParams(FName(TEXT("TraceParams")), true, this);
+	TraceParams.bReturnPhysicalMaterial = true;
+
+	GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, EndTrace, ECollisionChannel::ECC_PhysicsBody, TraceParams);
+
+	if (Hit.GetActor() == NULL)
+	{
+		return;
+	}
+
+	float DistanceBaseHit = BaseLocation.Z - Hit.Location.Z;
+	DownScale = DistanceBaseHit / originalVoxelHalfSize;
+	if (DistanceBaseHit < 10.f)
+	{
+		DownScale = 0.f;
+	}
+	else
+	{
+		isDown = true;
+		if (DistanceBaseHit > originalVoxelHalfSize)
+			BaseLocation.Z -= DistanceBaseHit;
+
+		sinScale = 1.5f * DownScale;
+		DownRunningTime = PI / 2.f;
+	}
+}
+
 
 void ADestroyedVoxel::GenerateVoxel(const FVector& VoxelLocation, EVoxelType e)
 {
@@ -170,5 +244,10 @@ void ADestroyedVoxel::GenerateVoxel(const FVector& VoxelLocation, EVoxelType e)
 	{
 		VoxelMeshComponent->SetMaterial(0, VoxelMaterials);
 	}
+
+	BaseLocation = VoxelLocation;
+	SetActorLocation(BaseLocation);
+	
+	CheckGravity();
 }
 

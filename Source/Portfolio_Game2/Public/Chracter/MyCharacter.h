@@ -46,11 +46,13 @@ private:
 	FTimerHandle MapLoadTimerHandle;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))
-	int ChunkRange;
+	int32 ChunkRange;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))
-	int ChunkRangeX2;
+	int32 ChunkRangeX2;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))
 	float ChunkSize;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
+	float VoxelSize;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))
 	TArray<FVector2D> ChunkCoordArray;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))

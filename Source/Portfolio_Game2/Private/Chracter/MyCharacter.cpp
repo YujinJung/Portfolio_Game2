@@ -32,9 +32,10 @@ AMyCharacter::AMyCharacter()
 	FollowCamera->bUsePawnControlRotation = false;
 
 	// Voxel Size
+	VoxelSize = 100.f;
 	ChunkRange = 16;
 	ChunkRangeX2 = ChunkRange * 2;
-	ChunkSize = ChunkRange * 100.f;
+	ChunkSize = ChunkRange * VoxelSize;
 	
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -241,9 +242,12 @@ void AMyCharacter::DestroyVoxel()
 		EVoxelType DestroyedVoxelType = EVoxelType::Empty;
 		ChunkArray[index]->SetVoxel(VoxelLocalLocation, DestroyedVoxelType);
 
-		ADestroyedVoxel* DestroyedVoxel= GetWorld()->SpawnActor<ADestroyedVoxel>(HitLocation, FRotator::ZeroRotator);
-		DestroyedVoxel->GenerateVoxel(HitLocation, DestroyedVoxelType);
-		DestroyedVoxelArray.Add(MoveTemp(DestroyedVoxel));
+		if (DestroyedVoxelType != EVoxelType::Empty)
+		{
+			ADestroyedVoxel* DestroyedVoxel = GetWorld()->SpawnActor<ADestroyedVoxel>(HitLocation, FRotator::ZeroRotator);
+			DestroyedVoxel->GenerateVoxel(HitLocation, DestroyedVoxelType);
+			DestroyedVoxelArray.Add(MoveTemp(DestroyedVoxel));
+		}
 	}
 }
 

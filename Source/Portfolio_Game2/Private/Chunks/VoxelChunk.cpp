@@ -45,7 +45,7 @@ AVoxelChunk::AVoxelChunk()
 
 	RootComponent = VoxelMeshComponent;
 
-	voxelSize = 100;
+	voxelSize = 100.f;
 	voxelHalfSize = voxelSize / 2;
 
 	FString MaterialPath(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Voxel"));

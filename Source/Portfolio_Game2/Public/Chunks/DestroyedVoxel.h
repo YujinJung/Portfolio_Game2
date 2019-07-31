@@ -17,12 +17,15 @@ public:
 	ADestroyedVoxel();
 
 public:	
+	virtual void BeginPlay() override;
+
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	void GenerateVoxel(const FVector& VoxelLocation, EVoxelType e);
-
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	void CheckGravity();
 
 private:
 	UPROPERTY()
@@ -34,4 +37,21 @@ private:
 	int32 voxelSize;
 	UPROPERTY()
 	int32 voxelHalfSize;
+	UPROPERTY()
+	int32 originalVoxelHalfSize;
+
+	UPROPERTY()
+	bool isDown;
+	UPROPERTY()
+	FVector BaseLocation;
+	
+	UPROPERTY()
+	float sinScale;
+	UPROPERTY()
+	float DownScale;
+
+	UPROPERTY()
+	float RunningTime;
+	UPROPERTY()
+	float DownRunningTime; // Move Downward Time
 };
