@@ -36,6 +36,8 @@ AMyCharacter::AMyCharacter()
 	ChunkRange = 16;
 	ChunkRangeX2 = ChunkRange * 2;
 	ChunkSize = ChunkRange * VoxelSize;
+
+	DestroyVoxelChunkIndex = -1;
 	
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -229,24 +231,31 @@ void AMyCharacter::PlaceVoxel()
 	}
 }
 
-void AMyCharacter::DestroyVoxel()
+void AMyCharacter::DestroyVoxel(float Value)
 {
-	FHitResult Hit;
-
-	FVector HitLocation;
-	int32 index;
-	if (CheckVoxel(Hit, HitLocation, index))
+	if (Value != 0.f)
 	{
-		FVector VoxelLocalLocation = HitLocation - ChunkArray[index]->GetActorLocation();
+		FHitResult Hit;
 
-		EVoxelType DestroyedVoxelType = EVoxelType::Empty;
-		ChunkArray[index]->SetVoxel(VoxelLocalLocation, DestroyedVoxelType);
-
-		if (DestroyedVoxelType != EVoxelType::Empty)
+		FVector HitLocation;
+		int32 index;
+		if (CheckVoxel(Hit, HitLocation, index))
 		{
-			ADestroyedVoxel* DestroyedVoxel = GetWorld()->SpawnActor<ADestroyedVoxel>(HitLocation, FRotator::ZeroRotator);
-			DestroyedVoxel->GenerateVoxel(HitLocation, DestroyedVoxelType);
-			DestroyedVoxelArray.Add(MoveTemp(DestroyedVoxel));
+			if (index != DestroyVoxelChunkIndex)
+			{
+				SetDestroyVoxelValueZero();
+				DestroyVoxelChunkIndex = index;
+			}
+
+			FVector VoxelLocalLocation = HitLocation - ChunkArray[index]->GetActorLocation();
+
+			EVoxelType DestroyedVoxelType = EVoxelType::Empty;
+			if (ChunkArray[index]->DestroyVoxel(VoxelLocalLocation, DestroyedVoxelType, Value))
+			{
+				ADestroyedVoxel* DestroyedVoxel = GetWorld()->SpawnActor<ADestroyedVoxel>(HitLocation, FRotator::ZeroRotator);
+				DestroyedVoxel->GenerateVoxel(HitLocation, DestroyedVoxelType);
+				DestroyedVoxelArray.Add(MoveTemp(DestroyedVoxel));
+			}
 		}
 	}
 }
@@ -311,6 +320,15 @@ void AMyCharacter::SetQuickSlotVoxelTypeArray(EVoxelType inVoxelType, int32 inde
 	}
 }
 
+void AMyCharacter::SetDestroyVoxelValueZero()
+{
+	if (DestroyVoxelChunkIndex != -1)
+	{
+		ChunkArray[DestroyVoxelChunkIndex]->InitDestroyVoxel();
+		DestroyVoxelChunkIndex = -1;
+	}
+}
+
 // Called every frame
 void AMyCharacter::Tick(float DeltaTime)
 {
@@ -325,8 +343,11 @@ void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
-	PlayerInputComponent->BindAction("LClick", IE_Pressed, this, &AMyCharacter::DestroyVoxel);
+	//PlayerInputComponent->BindAction("LClick", IE_Pressed, this, &AMyCharacter::DestroyVoxel);
 	PlayerInputComponent->BindAction("RClick", IE_Pressed, this, &AMyCharacter::PlaceVoxel);
+
+	PlayerInputComponent->BindAxis("LClickScale", this, &AMyCharacter::DestroyVoxel);
+	PlayerInputComponent->BindAction("LClick", IE_Released, this, &AMyCharacter::SetDestroyVoxelValueZero);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AMyCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AMyCharacter::MoveRight);

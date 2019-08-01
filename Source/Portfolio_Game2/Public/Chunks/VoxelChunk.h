@@ -32,7 +32,13 @@ public:
 	void UpdateMesh();
 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	void SetVoxel(FVector VoxelPos, EVoxelType& value);
+	void SetVoxel(const FVector& VoxelPos, EVoxelType& value);
+	
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	bool DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, float Value);
+
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	void InitDestroyVoxel();
 
 	FORCEINLINE const int32 GetChunkXYSize() const { return chunkXYSize; }
 
@@ -56,10 +62,18 @@ private:
 	UPROPERTY()
 	int32 chunkYIndex;
 	UPROPERTY()
-		int32 voxelSize;
+	int32 voxelSize;
 	UPROPERTY()
 	int32 voxelHalfSize;
 	
 	UPROPERTY()
 	TArray<int32> chunkElements;
+
+	// Destroy
+	UPROPERTY()
+	int32 CurrentDestroyVoxelIndex; // -1 : no Destroy Voxel
+	UPROPERTY()
+	EVoxelType CurrentDestroyVoxelType;
+	UPROPERTY()
+	float DestroyStage;
 };

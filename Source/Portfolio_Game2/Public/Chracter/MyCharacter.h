@@ -63,6 +63,10 @@ private:
 	TArray<EVoxelType> QuickSlotVoxelTypeArray;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
 	EVoxelType CurrentVoxelType;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
+	int32 DestroyVoxelChunkIndex;
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	void SetDestroyVoxelValueZero();
 
 private:
 	//bool CheckBlockName(AActor* Block, const FString& CheckBlockName);
@@ -81,7 +85,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	void PlaceVoxel();
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	void DestroyVoxel();
+	void DestroyVoxel(float Value);
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	bool CheckVoxel(FHitResult& OutHit, FVector& HitLocation, int32& index);
 

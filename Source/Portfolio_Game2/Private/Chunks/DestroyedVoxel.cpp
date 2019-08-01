@@ -227,7 +227,7 @@ void ADestroyedVoxel::GenerateVoxel(const FVector& VoxelLocation, EVoxelType e)
 			UV.Append(bUVs, ARRAY_COUNT(bUVs));
 
 			// red = 1 -> Grass
-			FColor color(FColor(static_cast<int>(e), 255, 255, i));
+			FColor color(FColor(static_cast<int>(e), 0, 255, i));
 
 			for (int j = 0; j < 4; ++j)
 			{

@@ -47,9 +47,16 @@ AVoxelChunk::AVoxelChunk()
 
 	voxelSize = 100.f;
 	voxelHalfSize = voxelSize / 2;
+	DestroyStage = 0.f;
+	CurrentDestroyVoxelIndex = -1;
 
 	FString MaterialPath(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Voxel"));
 	VoxelMaterials = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
+
+	if (VoxelMaterials)
+	{
+		VoxelMeshComponent->SetMaterial(0, VoxelMaterials);
+	}
 }
 
 float AVoxelChunk::CalcDensity(float x, float y, float z)
@@ -221,8 +228,9 @@ void AVoxelChunk::UpdateMesh()
 							UV.Append(bUVs, ARRAY_COUNT(bUVs));
 
 							auto density = CalcDensity(x, y, z);
-							// red = 1 -> Grass
-							FColor color(FColor(chunkElements[index], 255, 255, i));
+							// color.R - VoxelType, color.G - DestroyVoxelStage
+							int32 DestroyStageMatIndex = chunkElements[index] / 100;
+							FColor color(FColor(chunkElements[index] - (static_cast<float>(DestroyStageMatIndex) * 100), DestroyStageMatIndex, 255, i));
 													
 							for (int j = 0; j < 4; ++j)
 							{
@@ -242,10 +250,6 @@ void AVoxelChunk::UpdateMesh()
 
 	VoxelMeshComponent->CreateMeshSection(0, Vertices, Triangles, Normals, UV, VertexColors, Tangents, true);
 
-	if (VoxelMaterials)
-	{
-		VoxelMeshComponent->SetMaterial(0, VoxelMaterials);
-	}
 }
 
 /*
@@ -253,18 +257,79 @@ void AVoxelChunk::UpdateMesh()
  * @param VoxelLocation - Voxel Location
  * @param value			- Set Voxel Type / Return Voxel original type
  */
-void AVoxelChunk::SetVoxel(FVector VoxelLocation, EVoxelType& value)
+void AVoxelChunk::SetVoxel(const FVector& VoxelLocation, EVoxelType& value)
 {
 	// Round off
-	VoxelLocation += FVector(voxelHalfSize, voxelHalfSize, voxelHalfSize);
-	int32 x = VoxelLocation.X / voxelSize;
-	int32 y = VoxelLocation.Y / voxelSize;
-	int32 z = VoxelLocation.Z / voxelSize;
+	FVector LocalVoxelLocation = VoxelLocation + voxelHalfSize * FVector::OneVector;
+	int32 x = LocalVoxelLocation.X / voxelSize;
+	int32 y = LocalVoxelLocation.Y / voxelSize;
+	int32 z = LocalVoxelLocation.Z / voxelSize;
 
 	int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
 	EVoxelType ret = static_cast<EVoxelType>(chunkElements[index]);
 	chunkElements[index] = static_cast<int32>(value);
 	value = ret;
+
+	UpdateMesh();
+}
+
+/*
+ * DestroyVoxel
+ */
+bool AVoxelChunk::DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, float Value)
+{
+	// Round off
+	FVector LocalVoxelLocation = VoxelLocation + voxelHalfSize * FVector::OneVector;
+	int32 x = LocalVoxelLocation.X / voxelSize;
+	int32 y = LocalVoxelLocation.Y / voxelSize;
+	int32 z = LocalVoxelLocation.Z / voxelSize;
+
+	int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
+
+	// Change Destroy Voxel
+	if (index != CurrentDestroyVoxelIndex)
+	{
+		if (CurrentDestroyVoxelIndex != -1)
+		{
+			chunkElements[CurrentDestroyVoxelIndex] %= 100;
+		}
+
+		DestroyStage = 0;
+		CurrentDestroyVoxelIndex = index;
+	}
+
+	// Stage - 100 200 300 ...
+	// Voxel Type - 0 1 2 3 4 ..
+	uint8 stage = DestroyStage / 10;
+	chunkElements[CurrentDestroyVoxelIndex] %= 100;
+	chunkElements[CurrentDestroyVoxelIndex] += stage * 100;
+
+	// Destroy Final Stage
+	if (DestroyStage >= 100.f)
+	{
+		InitDestroyVoxel();
+
+		EVoxelType ret = EVoxelType::Empty;
+		SetVoxel(VoxelLocation, ret);
+
+		if (ret != EVoxelType::Empty)
+		{
+			e = ret;
+			return true;
+		}
+	}
+
+	UpdateMesh();
+	DestroyStage += Value;
+	return false;
+}
+
+void AVoxelChunk::InitDestroyVoxel()
+{
+	chunkElements[CurrentDestroyVoxelIndex] %= 100;
+	CurrentDestroyVoxelIndex = -1;
+	CurrentDestroyVoxelType = EVoxelType::Empty;
+	DestroyStage = 0.f;
 
 	UpdateMesh();
 }
