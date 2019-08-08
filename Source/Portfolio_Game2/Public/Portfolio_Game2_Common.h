@@ -8,7 +8,8 @@
  * Enum Voxel Type;
  */
 UENUM(BlueprintType)
-enum class EVoxelType : uint8 {
+enum class EVoxelType : uint8 
+{
 	Empty,
 	Dirt,
 	Grass,

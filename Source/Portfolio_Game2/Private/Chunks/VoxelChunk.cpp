@@ -326,7 +326,10 @@ bool AVoxelChunk::DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, floa
 
 void AVoxelChunk::InitDestroyVoxel()
 {
-	chunkElements[CurrentDestroyVoxelIndex] %= 100;
+	if (CurrentDestroyVoxelIndex >= 0)
+	{
+		chunkElements[CurrentDestroyVoxelIndex] %= 100;
+	}
 	CurrentDestroyVoxelIndex = -1;
 	CurrentDestroyVoxelType = EVoxelType::Empty;
 	DestroyStage = 0.f;

@@ -33,12 +33,17 @@ AMyCharacter::AMyCharacter()
 
 	// Voxel Size
 	VoxelSize = 100.f;
-	ChunkRange = 16;
-	ChunkRangeX2 = ChunkRange * 2;
-	ChunkSize = ChunkRange * VoxelSize;
+	VoxelRangeInChunk = 16;
+	VoxelRangeInChunkX2 = VoxelRangeInChunk * 2;
+	ChunkSize = VoxelRangeInChunk * VoxelSize;
+
+	ChunkRangeInWorld = 16;
+	MaxChunkRadius = ChunkSize * ChunkRangeInWorld;
 
 	DestroyVoxelChunkIndex = -1;
-	
+
+	LootingRadius = 200.f;
+
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 }
@@ -47,12 +52,13 @@ AMyCharacter::AMyCharacter()
 void AMyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	GetWorldTimerManager().SetTimer(MapLoadTimerHandle, this, &AMyCharacter::GenerateChunkMap, 0.1f, true);
 
 	// Voxel Type
 	//QuickSlotVoxelTypeArray.SetNumUninitialized(9);
-	QuickSlotVoxelTypeArray.Init(EVoxelType::Empty, 9);
-	CurrentVoxelType = QuickSlotVoxelTypeArray[0];
+	QuickSlotVoxelItemArray.Init(FVoxelItemInfo(), 9);
+	CurrentVoxelItem = QuickSlotVoxelItemArray[0];
+
+	GetWorldTimerManager().SetTimer(MapLoadTimerHandle, this, &AMyCharacter::GenerateChunkMap, 0.1f, true);
 }
 
 void AMyCharacter::MoveForward(float Value)
@@ -100,12 +106,12 @@ void AMyCharacter::GenerateChunkMap()
 	static int g_i = 1; // odd even check
 
 	// -ChunkRange ~ 0 | 0 ~ ChunkRange
-	int yStart = (y_i == -1) ? -ChunkRange : 0;
-	int yEnd = yStart + ChunkRange;
+	int yStart = (y_i == -1) ? -ChunkRangeInWorld : 0;
+	int yEnd = yStart + ChunkRangeInWorld;
 	if (x_i == 0)
 	{
-		yStart = -ChunkRange;
-		yEnd = ChunkRange;
+		yStart = -ChunkRangeInWorld;
+		yEnd = ChunkRangeInWorld;
 	}
 
 	FVector PlayerLocation = GetActorLocation();
@@ -124,7 +130,7 @@ void AMyCharacter::GenerateChunkMap()
 
 		if (!ChunkCoordArray.Contains(CurrentIndex))
 		{
-			if (CheckRadius(FVector(CurrentIndex * ChunkSize, 0.f)))
+			if (CheckRadius(FVector(CurrentIndex * ChunkSize, 0.f), MaxChunkRadius))
 			{
 				AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(CurrentIndex * ChunkSize, 0.f), FRotator::ZeroRotator);
 
@@ -159,7 +165,7 @@ void AMyCharacter::GenerateChunkMap()
 
 			if ((x_i >= 1) && (y_i == 1))
 			{
-				x_i = (x_i + 1) % ChunkRange;
+				x_i = (x_i + 1) % ChunkRangeInWorld;
 			}
 		}
 
@@ -177,7 +183,8 @@ void AMyCharacter::RemoveChunk()
 	for (int i = 0; i < ChunkCoordArray.Num(); ++i)
 	{
 		const FVector CurrnetChunkCoord(ChunkCoordArray[i] * ChunkSize, 0.f);
-		if (!CheckRadius(CurrnetChunkCoord))
+
+		if (!CheckRadius(CurrnetChunkCoord, MaxChunkRadius))
 		{
 			ChunkArray[i]->Destroy();
 			ChunkArray.RemoveAt(i);
@@ -186,24 +193,35 @@ void AMyCharacter::RemoveChunk()
 	}
 }
 
-bool AMyCharacter::CheckRadius(const FVector& ChunkCoord)
+bool AMyCharacter::CheckRadius(const FVector& ChunkCoord, const float Radius)
 {
-	const float maxLength = ChunkSize * ChunkRange;
-
 	FVector PlayerLocation = GetActorLocation();
 
-	PlayerLocation.Z = 0.f;
+	// Chunk Range Check
+	if (Radius == MaxChunkRadius)
+	{
+		// Calculate Chunk Index by player location
+		PlayerLocation.Z = 0.f;
+		PlayerLocation /= ChunkSize;
+		PlayerLocation.X = floor(PlayerLocation.X);
+		PlayerLocation.Y = floor(PlayerLocation.Y);
 
-	PlayerLocation /= ChunkSize;
-	PlayerLocation.X = floor(PlayerLocation.X);
-	PlayerLocation.Y = floor(PlayerLocation.Y);
-	PlayerLocation *= ChunkSize;
+		// Calculate Location Coord by index
+		PlayerLocation *= ChunkSize;
+	}
 
 	// Vector between player and chunk
 	const FVector PlayerChunkVector = ChunkCoord - PlayerLocation;
 	const float vectorLength = PlayerChunkVector.Size();
 
-	if (vectorLength <= maxLength)
+	if (Radius == 3000.f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("player vector: %s"), *GetActorLocation().ToString());
+		UE_LOG(LogTemp, Warning, TEXT("vector: %s"), *PlayerChunkVector.ToString());
+		UE_LOG(LogTemp, Warning, TEXT("length : %f"), vectorLength);
+	}
+
+	if (vectorLength <= Radius)
 		return true;
 
 	return false;
@@ -215,7 +233,7 @@ bool AMyCharacter::CheckRadius(const FVector& ChunkCoord)
  */
 void AMyCharacter::PlaceVoxel()
 {
-	if ((CurrentVoxelType == EVoxelType::Empty) || (CurrentVoxelType == EVoxelType::Count))
+	if ((CurrentVoxelItem.VoxelType == EVoxelType::Empty) || (CurrentVoxelItem.VoxelType == EVoxelType::Count))
 	{
 		return;
 	}
@@ -227,7 +245,8 @@ void AMyCharacter::PlaceVoxel()
 	if (CheckVoxel(Hit, HitLocation, index))
 	{
 		FVector VoxelLocalLocation = Hit.Location - ChunkArray[index]->GetActorLocation() + Hit.Normal;
-		ChunkArray[index]->SetVoxel(VoxelLocalLocation, CurrentVoxelType);
+		EVoxelType PlaceVoxelType = CurrentVoxelItem.VoxelType;
+		ChunkArray[index]->SetVoxel(VoxelLocalLocation, PlaceVoxelType);
 	}
 }
 
@@ -254,6 +273,7 @@ void AMyCharacter::DestroyVoxel(float Value)
 			{
 				ADestroyedVoxel* DestroyedVoxel = GetWorld()->SpawnActor<ADestroyedVoxel>(HitLocation, FRotator::ZeroRotator);
 				DestroyedVoxel->GenerateVoxel(HitLocation, DestroyedVoxelType);
+				DestroyedVoxel->SetNum(1);
 				DestroyedVoxelArray.Add(MoveTemp(DestroyedVoxel));
 			}
 		}
@@ -304,19 +324,81 @@ bool AMyCharacter::CheckVoxel(FHitResult& OutHit, FVector& HitLocation, int32& i
 	}
 }
 
-void AMyCharacter::SetVoxelType(int32 index)
+/*
+ * return -1  : quickslot is not empty
+ * return > 0 : quickslot empty index
+ */
+int32 AMyCharacter::GetQuickSlotEmptyIndex()
 {
-	if ((0 <= index) && (index <= 9))
+	for (int i = 0; i < QuickSlotVoxelItemArray.Num(); ++i)
 	{
-		CurrentVoxelType = QuickSlotVoxelTypeArray[index];
+		if ((QuickSlotVoxelItemArray[i].VoxelType == EVoxelType::Empty) && (QuickSlotVoxelItemArray[i].Num == 0))
+		{
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+void AMyCharacter::LootingVoxel()
+{
+	// return no destroy voxel
+	if (DestroyedVoxelArray.Num() <= 0)
+	{
+		return;
+	}
+
+	// for each DestroyedVoxelArray and check Radius between player and voxel 
+	for (int index = 0; index < DestroyedVoxelArray.Num(); ++index)
+	{
+		auto& e = DestroyedVoxelArray[index];
+
+		// if voxel in LootingRaidus, Looting Voxel
+		if (CheckRadius(e->GetBaseLocation(), LootingRadius))
+		{
+			// check e`s voxelType and Destroy e
+			FVoxelItemInfo LootingVoxelItem;
+			LootingVoxelItem.VoxelType = e->GetVoxelItemType();
+			LootingVoxelItem.Num = e->GetVoxelItemNum();
+
+			// Add e in quickslot
+			int QuickSlotIndex = GetQuickSlotEmptyIndex();
+			// -1 is no empty quickslot
+			if (QuickSlotIndex != -1)
+			{
+				QuickSlotVoxelItemArray[QuickSlotIndex] = LootingVoxelItem;
+
+				// Destory Looting Voxel
+				e->Destroy();
+				DestroyedVoxelArray.RemoveAtSwap(index);
+			}
+		
+			continue;
+		}
+
+		// if voxel have no lifetime, Delete Voxel -> true (CheckLifeTime)
+		if (e->CheckLifeTime())
+		{
+			DestroyedVoxelArray.RemoveAtSwap(index);
+		}
 	}
 }
 
-void AMyCharacter::SetQuickSlotVoxelTypeArray(EVoxelType inVoxelType, int32 index)
+void AMyCharacter::SetVoxelItem(int32 index)
 {
 	if ((0 <= index) && (index <= 9))
 	{
-		QuickSlotVoxelTypeArray[index] = inVoxelType;
+		CurrentVoxelItem = QuickSlotVoxelItemArray[index];
+	}
+}
+
+void AMyCharacter::SetQuickSlotVoxelItemArray(EVoxelType inVoxelType, int32 num, int32 index)
+{
+	if ((0 <= index) && (index <= 9))
+	{
+		QuickSlotVoxelItemArray[index].VoxelType = inVoxelType;
+		QuickSlotVoxelItemArray[index].Num = num;
 	}
 }
 
@@ -333,6 +415,8 @@ void AMyCharacter::SetDestroyVoxelValueZero()
 void AMyCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	LootingVoxel();
 }
 
 // Called to bind functionality to input

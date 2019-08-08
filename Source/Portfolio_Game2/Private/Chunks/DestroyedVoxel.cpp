@@ -46,6 +46,9 @@ ADestroyedVoxel::ADestroyedVoxel()
 	originalVoxelHalfSize = 50.f;
 	RunningTime = 0.f;
 	sinScale = 1.f;
+	
+	VoxelInfo.VoxelType = EVoxelType::Empty;
+	VoxelInfo.Num = 0;
 
 	FString MaterialPath(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Voxel"));
 	VoxelMaterials = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
@@ -93,8 +96,6 @@ void ADestroyedVoxel::Tick(float DeltaTime)
 			isDown = false;
 		}
 	}
-
-	/* TODO: DELETE after life time */
 }
 
 /*
@@ -134,6 +135,10 @@ void ADestroyedVoxel::CheckGravity()
 	}
 }
 
+void ADestroyedVoxel::SetNum(int32 num)
+{
+	VoxelInfo.Num = num;
+}
 
 void ADestroyedVoxel::GenerateVoxel(const FVector& VoxelLocation, EVoxelType e)
 {
@@ -143,6 +148,8 @@ void ADestroyedVoxel::GenerateVoxel(const FVector& VoxelLocation, EVoxelType e)
 	TArray<FVector2D> UV;
 	TArray<FColor> VertexColors;
 	TArray<FProcMeshTangent> Tangents;
+
+	VoxelInfo.VoxelType = e;
 
 	int32 triangleVerticeNum = 0;
 
@@ -251,3 +258,13 @@ void ADestroyedVoxel::GenerateVoxel(const FVector& VoxelLocation, EVoxelType e)
 	CheckGravity();
 }
 
+bool ADestroyedVoxel::CheckLifeTime()
+{
+	int32 LifeTime = 30.f;
+	if (RunningTime > LifeTime)
+	{
+		this->Destroy();
+		return true;
+	}
+	return false;
+}

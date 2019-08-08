@@ -4,8 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Portfolio_Game2_Common.h"
+#include "VoxelItemInfo.h"
 #include "DestroyedVoxel.generated.h"
+
 
 UCLASS()
 class PORTFOLIO_GAME2_API ADestroyedVoxel : public AActor
@@ -22,16 +23,30 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	UFUNCTION(BlueprintCallable, Category = Voxel)
+	UFUNCTION(BlueprintCallable, Category = DestroyedVoxel)
 	void GenerateVoxel(const FVector& VoxelLocation, EVoxelType e);
-	UFUNCTION(BlueprintCallable, Category = Voxel)
+	UFUNCTION(BlueprintPure, Category = DestroyedVoxel)
+	bool CheckLifeTime();
+	UFUNCTION(BlueprintCallable, Category = DestroyedVoxel)
 	void CheckGravity();
-
+	UFUNCTION(BlueprintCallable, Category = DestroyedVoxel)
+	void SetNum(int32 num);
+	UFUNCTION(BlueprintPure, Category = DestroyedVoxel)
+	FORCEINLINE FVector GetBaseLocation() const { return BaseLocation; }
+	UFUNCTION(BlueprintPure, Category = DestroyedVoxel)
+	FORCEINLINE EVoxelType GetVoxelItemType() { return VoxelInfo.VoxelType; }
+	UFUNCTION(BlueprintPure, Category = DestroyedVoxel)
+	FORCEINLINE int32 GetVoxelItemNum() { return VoxelInfo.Num; }
+	
 private:
 	UPROPERTY()
 	class UProceduralMeshComponent* VoxelMeshComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
 	class UMaterial* VoxelMaterials;
+	/*UPROPERTY()
+	EVoxelType VoxelType;*/
+	UPROPERTY()
+	FVoxelItemInfo VoxelInfo;
 
 	UPROPERTY()
 	int32 voxelSize;

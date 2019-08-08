@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Portfolio_Game2_Common.h"
+#include "VoxelItemInfo.h"
 #include "MyCharacter.generated.h"
 
 class AVoxelChunk;
@@ -20,20 +21,20 @@ public:
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = true))
-	class USpringArmComponent* CameraBoom;
+		class USpringArmComponent* CameraBoom;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = true))
-	class UCameraComponent* FollowCamera;
+		class UCameraComponent* FollowCamera;
 
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
-	float BaseTurnAtRate;
+		float BaseTurnAtRate;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
-	float BaseLookUpAtRate;
+		float BaseLookUpAtRate;
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	
+
 	// Character Movement
 	void MoveForward(float Value);
 	void MoveRight(float Value);
@@ -45,28 +46,42 @@ protected:
 private:
 	FTimerHandle MapLoadTimerHandle;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))
-	int32 ChunkRange;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))
-	int32 ChunkRangeX2;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))
-	float ChunkSize;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
-	float VoxelSize;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))
-	TArray<FVector2D> ChunkCoordArray;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta=(AllowPrivateAccess = true))
-	TArray<AVoxelChunk*> ChunkArray;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
-	TArray<ADestroyedVoxel*> DestroyedVoxelArray;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
-	TArray<EVoxelType> QuickSlotVoxelTypeArray;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
-	EVoxelType CurrentVoxelType;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
-	int32 DestroyVoxelChunkIndex;
+	// Chunk
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+		float ChunkSize;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+		float MaxChunkRadius;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+		int32 VoxelRangeInChunk;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+		int32 VoxelRangeInChunkX2;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+		int32 ChunkRangeInWorld;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+		TArray<FVector2D> ChunkCoordArray;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+		TArray<AVoxelChunk*> ChunkArray;
+
+	// Voxel
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
+		float VoxelSize;
+	
+	// Destroy Voxel
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
+		TArray<ADestroyedVoxel*> DestroyedVoxelArray;
+
+	// Quick Slot
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
+		TArray<FVoxelItemInfo> QuickSlotVoxelItemArray;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
+		FVoxelItemInfo CurrentVoxelItem;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
+		int32 DestroyVoxelChunkIndex;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
+		float LootingRadius;
+
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	void SetDestroyVoxelValueZero();
+		void SetDestroyVoxelValueZero();
 
 private:
 	//bool CheckBlockName(AActor* Block, const FString& CheckBlockName);
@@ -75,30 +90,35 @@ private:
 public:
 	// Create / Update / Destory Chunk
 	UFUNCTION(BlueprintCallable, Category = Chunk)
-	void GenerateChunkMap();
+		void GenerateChunkMap();
 	UFUNCTION(BlueprintCallable, Category = Chunk)
-	void RemoveChunk();
+		void RemoveChunk();
 	UFUNCTION(BlueprintCallable, Category = Chunk)
-	bool CheckRadius(const FVector& ChunkCoord);
+		bool CheckRadius(const FVector& ChunkCoord, const float Radius);
 
 	// Place / Destroy Voxel 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	void PlaceVoxel();
+		void PlaceVoxel();
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	void DestroyVoxel(float Value);
+		void DestroyVoxel(float Value);
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	bool CheckVoxel(FHitResult& OutHit, FVector& HitLocation, int32& index);
+		bool CheckVoxel(FHitResult& OutHit, FVector& HitLocation, int32& index);
 
-	UFUNCTION(BlueprintPure, Category = Voxel)
-	FORCEINLINE EVoxelType GetCurrentVoxelType() const { return CurrentVoxelType; }
+	// Quick Slot / Inventory System
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	void SetVoxelType(int32 index);
+		void LootingVoxel();
 	UFUNCTION(BlueprintPure, Category = Voxel)
-	FORCEINLINE TArray<EVoxelType> GetQuickSlotVoxelTypeArray() const { return QuickSlotVoxelTypeArray; }
+		int32 GetQuickSlotEmptyIndex();
+	UFUNCTION(BlueprintPure, Category = Voxel)
+		FORCEINLINE FVoxelItemInfo GetCurrentVoxelItem() const { return CurrentVoxelItem; }
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	void SetQuickSlotVoxelTypeArray(EVoxelType inVoxelType, int32 index);
+		void SetVoxelItem(int32 index);
+	UFUNCTION(BlueprintPure, Category = Voxel)
+		FORCEINLINE TArray<FVoxelItemInfo> GetQuickSlotVoxelItemArray() const { return QuickSlotVoxelItemArray; }
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+		void SetQuickSlotVoxelItemArray(EVoxelType inVoxelType, int32 num, int32 index);
 
-public:	
+public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
