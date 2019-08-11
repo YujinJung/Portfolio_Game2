@@ -12,10 +12,10 @@ struct FVoxelItemInfo
 	GENERATED_USTRUCT_BODY()
 
 	/** The voxels you have */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TestStruct")
-	int32 Num;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VoxelItemInfo")
+	uint8 Num;
 	/** Volxe Type by EVoxelType */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TestStruct")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VoxelItemInfo")
 	EVoxelType VoxelType;
 	
 

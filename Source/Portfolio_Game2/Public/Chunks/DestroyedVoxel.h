@@ -43,8 +43,6 @@ private:
 	class UProceduralMeshComponent* VoxelMeshComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
 	class UMaterial* VoxelMaterials;
-	/*UPROPERTY()
-	EVoxelType VoxelType;*/
 	UPROPERTY()
 	FVoxelItemInfo VoxelInfo;
 

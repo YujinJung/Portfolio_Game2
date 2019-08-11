@@ -10,6 +10,8 @@
 #include "VoxelChunk.h"
 #include "DestroyedVoxel.h"
 
+#define LOG(x, ...) UE_LOG(LogTemp, Warning, TEXT(x), __VA_ARGS__)
+
 AMyCharacter::AMyCharacter()
 {
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 150.f);
@@ -41,6 +43,7 @@ AMyCharacter::AMyCharacter()
 	MaxChunkRadius = ChunkSize * ChunkRangeInWorld;
 
 	DestroyVoxelChunkIndex = -1;
+	MaxVoxelItemNum = 64;
 
 	LootingRadius = 200.f;
 
@@ -58,7 +61,8 @@ void AMyCharacter::BeginPlay()
 	QuickSlotVoxelItemArray.Init(FVoxelItemInfo(), 9);
 	CurrentVoxelItem = QuickSlotVoxelItemArray[0];
 
-	GetWorldTimerManager().SetTimer(MapLoadTimerHandle, this, &AMyCharacter::GenerateChunkMap, 0.1f, true);
+	InitChunkMap();
+	GetWorldTimerManager().SetTimer(MapLoadTimerHandle, this, &AMyCharacter::UpdateChunkMap, 0.1f, true);
 }
 
 void AMyCharacter::MoveForward(float Value)
@@ -95,11 +99,19 @@ void AMyCharacter::LookUpAtRate(float Rate)
 	AddControllerPitchInput(Rate * BaseLookUpAtRate * GetWorld()->GetDeltaSeconds());
 }
 
+
+void AMyCharacter::InitChunkMap()
+{
+	for (int index = 0; index < 4 * ChunkRangeInWorld + 1; ++index)
+	{
+		UpdateChunkMap();
+	}
+}
 /*
  * Generate and Update Chunk
  * (x, y) ++ -- -+ +-
  */
-void AMyCharacter::GenerateChunkMap()
+void AMyCharacter::UpdateChunkMap()
 {
 	static int x_i = 0; // 0 1 2 3 ... ChunkRange 0 1 2 ... 
 	static int y_i = 1; // 1 -1 1 -1
@@ -214,13 +226,6 @@ bool AMyCharacter::CheckRadius(const FVector& ChunkCoord, const float Radius)
 	const FVector PlayerChunkVector = ChunkCoord - PlayerLocation;
 	const float vectorLength = PlayerChunkVector.Size();
 
-	if (Radius == 3000.f)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("player vector: %s"), *GetActorLocation().ToString());
-		UE_LOG(LogTemp, Warning, TEXT("vector: %s"), *PlayerChunkVector.ToString());
-		UE_LOG(LogTemp, Warning, TEXT("length : %f"), vectorLength);
-	}
-
 	if (vectorLength <= Radius)
 		return true;
 
@@ -239,10 +244,9 @@ void AMyCharacter::PlaceVoxel()
 	}
 
 	FHitResult Hit;
-	FVector HitLocation;
 	int32 index;
 
-	if (CheckVoxel(Hit, HitLocation, index))
+	if (CheckVoxel(Hit, index))
 	{
 		FVector VoxelLocalLocation = Hit.Location - ChunkArray[index]->GetActorLocation() + Hit.Normal;
 		EVoxelType PlaceVoxelType = CurrentVoxelItem.VoxelType;
@@ -256,9 +260,8 @@ void AMyCharacter::DestroyVoxel(float Value)
 	{
 		FHitResult Hit;
 
-		FVector HitLocation;
 		int32 index;
-		if (CheckVoxel(Hit, HitLocation, index))
+		if (CheckVoxel(Hit,index))
 		{
 			if (index != DestroyVoxelChunkIndex)
 			{
@@ -266,6 +269,10 @@ void AMyCharacter::DestroyVoxel(float Value)
 				DestroyVoxelChunkIndex = index;
 			}
 
+			FVector DirectionVector = (Hit.Location - GetActorLocation()).GetSafeNormal();
+			FVector HitLocation = Hit.Location + DirectionVector;
+
+			//LOG("Hit : %s , HitLocation : %s, index : %d", *Hit.GetActor()->GetActorLocation().ToString(), *HitLocation.ToString(), index);
 			FVector VoxelLocalLocation = HitLocation - ChunkArray[index]->GetActorLocation();
 
 			EVoxelType DestroyedVoxelType = EVoxelType::Empty;
@@ -280,7 +287,7 @@ void AMyCharacter::DestroyVoxel(float Value)
 	}
 }
 
-bool AMyCharacter::CheckVoxel(FHitResult& OutHit, FVector& HitLocation, int32& index)
+bool AMyCharacter::CheckVoxel(FHitResult& OutHit, int32& index)
 {
 	FVector CamLocation;
 	FRotator CamRotation;
@@ -304,14 +311,9 @@ bool AMyCharacter::CheckVoxel(FHitResult& OutHit, FVector& HitLocation, int32& i
 
 	if (OutHit.GetActor() != NULL)
 	{
-		/*if (!OutHit.GetActor()->GetClass()->IsChildOf(AVoxelChunk::StaticClass()))
-			return false;*/
+		const float x = floor(OutHit.GetActor()->GetActorLocation().X / ChunkSize);
+		const float y = floor(OutHit.GetActor()->GetActorLocation().Y / ChunkSize);
 
-		FVector DirectionVector = (OutHit.Location - GetActorLocation()).GetSafeNormal();
-		HitLocation = OutHit.Location + DirectionVector;
-
-		const float x = floor(HitLocation.X / ChunkSize);
-		const float y = floor(HitLocation.Y / ChunkSize);
 		FVector2D HitChunk(x, y);
 
 		index = ChunkCoordArray.Find(HitChunk);
@@ -328,17 +330,34 @@ bool AMyCharacter::CheckVoxel(FHitResult& OutHit, FVector& HitLocation, int32& i
  * return -1  : quickslot is not empty
  * return > 0 : quickslot empty index
  */
-int32 AMyCharacter::GetQuickSlotEmptyIndex()
+uint8 AMyCharacter::GetQuickSlotEmptyIndex(const FVoxelItemInfo& LootingVoxel)
 {
+	int EmptyIndex = 128;
+
 	for (int i = 0; i < QuickSlotVoxelItemArray.Num(); ++i)
 	{
-		if ((QuickSlotVoxelItemArray[i].VoxelType == EVoxelType::Empty) && (QuickSlotVoxelItemArray[i].Num == 0))
+		// Current QuickSlotVoxel
+		auto& cQuickSlotVoxel = QuickSlotVoxelItemArray[i];
+		uint8 SumVoxelNum = cQuickSlotVoxel.Num + LootingVoxel.Num;
+
+		// Same Voxel Item && Sum of Quickslot and Looting Voxel Num is less than maximum.
+		if ((cQuickSlotVoxel.VoxelType == LootingVoxel.VoxelType)
+			&& (SumVoxelNum >= 0)
+			&& (SumVoxelNum <= MaxVoxelItemNum))
 		{
 			return i;
 		}
+
+		// Find Empty Index
+		if ((EmptyIndex == 128)
+			&& (cQuickSlotVoxel.VoxelType == EVoxelType::Empty) 
+			&& (cQuickSlotVoxel.Num == 0))
+		{
+			EmptyIndex = i;
+		}
 	}
 
-	return -1;
+	return EmptyIndex;
 }
 
 void AMyCharacter::LootingVoxel()
@@ -352,25 +371,29 @@ void AMyCharacter::LootingVoxel()
 	// for each DestroyedVoxelArray and check Radius between player and voxel 
 	for (int index = 0; index < DestroyedVoxelArray.Num(); ++index)
 	{
-		auto& e = DestroyedVoxelArray[index];
+		// Current Destroyed Voxel
+		auto& cDestroyedVoxel = DestroyedVoxelArray[index];
 
 		// if voxel in LootingRaidus, Looting Voxel
-		if (CheckRadius(e->GetBaseLocation(), LootingRadius))
+		if (CheckRadius(cDestroyedVoxel->GetBaseLocation(), LootingRadius))
 		{
 			// check e`s voxelType and Destroy e
 			FVoxelItemInfo LootingVoxelItem;
-			LootingVoxelItem.VoxelType = e->GetVoxelItemType();
-			LootingVoxelItem.Num = e->GetVoxelItemNum();
+			LootingVoxelItem.VoxelType = cDestroyedVoxel->GetVoxelItemType();
+			LootingVoxelItem.Num = cDestroyedVoxel->GetVoxelItemNum();
+
+			int QuickSlotIndex = GetQuickSlotEmptyIndex(LootingVoxelItem);
 
 			// Add e in quickslot
-			int QuickSlotIndex = GetQuickSlotEmptyIndex();
 			// -1 is no empty quickslot
 			if (QuickSlotIndex != -1)
 			{
-				QuickSlotVoxelItemArray[QuickSlotIndex] = LootingVoxelItem;
+				QuickSlotVoxelItemArray[QuickSlotIndex].VoxelType = LootingVoxelItem.VoxelType;
+				QuickSlotVoxelItemArray[QuickSlotIndex].Num += LootingVoxelItem.Num;
 
+				// TODO : fly Voxel 
 				// Destory Looting Voxel
-				e->Destroy();
+				cDestroyedVoxel->Destroy();
 				DestroyedVoxelArray.RemoveAtSwap(index);
 			}
 		
@@ -378,14 +401,14 @@ void AMyCharacter::LootingVoxel()
 		}
 
 		// if voxel have no lifetime, Delete Voxel -> true (CheckLifeTime)
-		if (e->CheckLifeTime())
+		if (cDestroyedVoxel->CheckLifeTime())
 		{
 			DestroyedVoxelArray.RemoveAtSwap(index);
 		}
 	}
 }
 
-void AMyCharacter::SetVoxelItem(int32 index)
+void AMyCharacter::SetCurrentVoxelItemWithIndex(int32 index)
 {
 	if ((0 <= index) && (index <= 9))
 	{
@@ -393,9 +416,19 @@ void AMyCharacter::SetVoxelItem(int32 index)
 	}
 }
 
+void AMyCharacter::SetCurrentVoxelItem(const FVoxelItemInfo& VoxelInfo)
+{
+	if (VoxelInfo.Num < 0)
+	{
+		return;
+	}
+
+	CurrentVoxelItem = VoxelInfo;
+}
+
 void AMyCharacter::SetQuickSlotVoxelItemArray(EVoxelType inVoxelType, int32 num, int32 index)
 {
-	if ((0 <= index) && (index <= 9))
+	if ((0 <= index) && (index <= 9) && (num >= 0))
 	{
 		QuickSlotVoxelItemArray[index].VoxelType = inVoxelType;
 		QuickSlotVoxelItemArray[index].Num = num;
@@ -441,4 +474,3 @@ void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("LookUpAtRate", this, &AMyCharacter::LookUpAtRate);
 }
-

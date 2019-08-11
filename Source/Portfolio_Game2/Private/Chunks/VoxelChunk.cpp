@@ -291,6 +291,7 @@ bool AVoxelChunk::DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, floa
 	{
 		if (CurrentDestroyVoxelIndex != -1)
 		{
+			// Clear Stage
 			chunkElements[CurrentDestroyVoxelIndex] %= 100;
 		}
 

@@ -43,6 +43,7 @@ protected:
 	void TurnAtRate(float Rate);
 	void LookUpAtRate(float Rate);
 
+
 private:
 	FTimerHandle MapLoadTimerHandle;
 
@@ -79,6 +80,8 @@ private:
 		int32 DestroyVoxelChunkIndex;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
 		float LootingRadius;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
+		uint8 MaxVoxelItemNum;
 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 		void SetDestroyVoxelValueZero();
@@ -88,9 +91,11 @@ private:
 	FORCEINLINE float CalcBlockNumber(const float& a) { return ((a + (ChunkSize * 0.5f)) / 100.f); };
 
 public:
+	UFUNCTION(BlueprintCallable, Category = Chunk)
+	void InitChunkMap();
 	// Create / Update / Destory Chunk
 	UFUNCTION(BlueprintCallable, Category = Chunk)
-		void GenerateChunkMap();
+		void UpdateChunkMap();
 	UFUNCTION(BlueprintCallable, Category = Chunk)
 		void RemoveChunk();
 	UFUNCTION(BlueprintCallable, Category = Chunk)
@@ -102,19 +107,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 		void DestroyVoxel(float Value);
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-		bool CheckVoxel(FHitResult& OutHit, FVector& HitLocation, int32& index);
+		bool CheckVoxel(FHitResult& OutHit, int32& index);
 
 	// Quick Slot / Inventory System
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 		void LootingVoxel();
 	UFUNCTION(BlueprintPure, Category = Voxel)
-		int32 GetQuickSlotEmptyIndex();
+		uint8 GetQuickSlotEmptyIndex(const FVoxelItemInfo& LootingVoxel);
 	UFUNCTION(BlueprintPure, Category = Voxel)
 		FORCEINLINE FVoxelItemInfo GetCurrentVoxelItem() const { return CurrentVoxelItem; }
-	UFUNCTION(BlueprintCallable, Category = Voxel)
-		void SetVoxelItem(int32 index);
 	UFUNCTION(BlueprintPure, Category = Voxel)
 		FORCEINLINE TArray<FVoxelItemInfo> GetQuickSlotVoxelItemArray() const { return QuickSlotVoxelItemArray; }
+
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+		void SetCurrentVoxelItem(const FVoxelItemInfo& VoxelInfo);
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+		void SetCurrentVoxelItemWithIndex(int32 index);
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 		void SetQuickSlotVoxelItemArray(EVoxelType inVoxelType, int32 num, int32 index);
 
