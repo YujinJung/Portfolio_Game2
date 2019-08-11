@@ -10,6 +10,7 @@
 #include "TimerManager.h"
 #include "VoxelChunk.h"
 #include "DestroyedVoxel.h"
+#include "QuickSlot.h"
 
 #define LOG(x, ...) UE_LOG(LogTemp, Warning, TEXT(x), __VA_ARGS__)
 
@@ -44,8 +45,7 @@ AMyCharacter::AMyCharacter()
 	MaxChunkRadius = ChunkSize * ChunkRangeInWorld;
 
 	DestroyVoxelChunkIndex = -1;
-	MaxVoxelItemNum = 64;
-
+	
 	LootingRadius = 200.f;
 	isPause = false;
 
@@ -58,13 +58,10 @@ void AMyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Voxel Type
-	//QuickSlotVoxelTypeArray.SetNumUninitialized(9);
-	QuickSlotVoxelItemArray.Init(FVoxelItemInfo(), 9);
-	CurrentVoxelItem = QuickSlotVoxelItemArray[0];
-
 	InitChunkMap();
 	GetWorldTimerManager().SetTimer(MapLoadTimerHandle, this, &AMyCharacter::UpdateChunkMap, 0.1f, true);
+
+	QuickSlotUI = NewObject<UQuickSlot>();
 }
 
 void AMyCharacter::MoveForward(float Value)
@@ -246,7 +243,7 @@ bool AMyCharacter::CheckRadius(const FVector& ChunkCoord, const float Radius)
  */
 void AMyCharacter::PlaceVoxel()
 {
-	if ((CurrentVoxelItem.VoxelType == EVoxelType::Empty) || (CurrentVoxelItem.VoxelType == EVoxelType::Count))
+	if(!QuickSlotUI->isValidCurrentVoxelItem())
 	{
 		return;
 	}
@@ -257,7 +254,7 @@ void AMyCharacter::PlaceVoxel()
 	if (CheckVoxel(Hit, index))
 	{
 		FVector VoxelLocalLocation = Hit.Location - ChunkArray[index]->GetActorLocation() + Hit.Normal;
-		EVoxelType PlaceVoxelType = CurrentVoxelItem.VoxelType;
+		EVoxelType PlaceVoxelType = QuickSlotUI->GetCurrentVoxelItem().VoxelType;
 		ChunkArray[index]->SetVoxel(VoxelLocalLocation, PlaceVoxelType);
 	}
 }
@@ -334,39 +331,6 @@ bool AMyCharacter::CheckVoxel(FHitResult& OutHit, int32& index)
 	}
 }
 
-/*
- * return -1  : quickslot is not empty
- * return > 0 : quickslot empty index
- */
-uint8 AMyCharacter::GetQuickSlotEmptyIndex(const FVoxelItemInfo& LootingVoxel)
-{
-	int EmptyIndex = 128;
-
-	for (int i = 0; i < QuickSlotVoxelItemArray.Num(); ++i)
-	{
-		// Current QuickSlotVoxel
-		auto& cQuickSlotVoxel = QuickSlotVoxelItemArray[i];
-		uint8 SumVoxelNum = cQuickSlotVoxel.Num + LootingVoxel.Num;
-
-		// Same Voxel Item && Sum of Quickslot and Looting Voxel Num is less than maximum.
-		if ((cQuickSlotVoxel.VoxelType == LootingVoxel.VoxelType)
-			&& (SumVoxelNum >= 0)
-			&& (SumVoxelNum <= MaxVoxelItemNum))
-		{
-			return i;
-		}
-
-		// Find Empty Index
-		if ((EmptyIndex == 128)
-			&& (cQuickSlotVoxel.VoxelType == EVoxelType::Empty) 
-			&& (cQuickSlotVoxel.Num == 0))
-		{
-			EmptyIndex = i;
-		}
-	}
-
-	return EmptyIndex;
-}
 
 void AMyCharacter::LootingVoxel()
 {
@@ -390,21 +354,14 @@ void AMyCharacter::LootingVoxel()
 			LootingVoxelItem.VoxelType = cDestroyedVoxel->GetVoxelItemType();
 			LootingVoxelItem.Num = cDestroyedVoxel->GetVoxelItemNum();
 
-			int QuickSlotIndex = GetQuickSlotEmptyIndex(LootingVoxelItem);
-
-			// Add e in quickslot
-			// -1 is no empty quickslot
-			if (QuickSlotIndex != -1)
+			if (QuickSlotUI->LootingVoxel(LootingVoxelItem))
 			{
-				QuickSlotVoxelItemArray[QuickSlotIndex].VoxelType = LootingVoxelItem.VoxelType;
-				QuickSlotVoxelItemArray[QuickSlotIndex].Num += LootingVoxelItem.Num;
-
 				// TODO : fly Voxel 
-				// Destory Looting Voxel
+								// Destory Looting Voxel
 				cDestroyedVoxel->Destroy();
 				DestroyedVoxelArray.RemoveAtSwap(index);
 			}
-		
+
 			continue;
 		}
 
@@ -413,33 +370,6 @@ void AMyCharacter::LootingVoxel()
 		{
 			DestroyedVoxelArray.RemoveAtSwap(index);
 		}
-	}
-}
-
-void AMyCharacter::SetCurrentVoxelItemWithIndex(int32 index)
-{
-	if ((0 <= index) && (index <= 9))
-	{
-		CurrentVoxelItem = QuickSlotVoxelItemArray[index];
-	}
-}
-
-void AMyCharacter::SetCurrentVoxelItem(const FVoxelItemInfo& VoxelInfo)
-{
-	if (VoxelInfo.Num < 0)
-	{
-		return;
-	}
-
-	CurrentVoxelItem = VoxelInfo;
-}
-
-void AMyCharacter::SetQuickSlotVoxelItemArray(EVoxelType inVoxelType, int32 num, int32 index)
-{
-	if ((0 <= index) && (index <= 9) && (num >= 0))
-	{
-		QuickSlotVoxelItemArray[index].VoxelType = inVoxelType;
-		QuickSlotVoxelItemArray[index].Num = num;
 	}
 }
 

@@ -10,6 +10,7 @@
 
 class AVoxelChunk;
 class ADestroyedVoxel;
+class UQuickSlot;
 
 UCLASS()
 class PORTFOLIO_GAME2_API AMyCharacter : public ACharacter
@@ -70,24 +71,20 @@ private:
 	// Destroy Voxel
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
 		TArray<ADestroyedVoxel*> DestroyedVoxelArray;
-
-	// Quick Slot
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
-		TArray<FVoxelItemInfo> QuickSlotVoxelItemArray;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
-		FVoxelItemInfo CurrentVoxelItem;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
 		int32 DestroyVoxelChunkIndex;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
-		uint8 MaxVoxelItemNum;
 
+	// Looting
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
 		float LootingRadius;
+	
+	// Quick Slot
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = QuickSlot, meta = (AllowPrivateAccess = true))
+		UQuickSlot* QuickSlotUI;
+
+	// UI
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UI, meta = (AllowPrivateAccess = true))
 		bool isPause;
-
-
-
 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 		void SetDestroyVoxelValueZero();
@@ -118,19 +115,9 @@ public:
 	// Quick Slot / Inventory System
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 		void LootingVoxel();
-	UFUNCTION(BlueprintPure, Category = Voxel)
-		uint8 GetQuickSlotEmptyIndex(const FVoxelItemInfo& LootingVoxel);
-	UFUNCTION(BlueprintPure, Category = Voxel)
-		FORCEINLINE FVoxelItemInfo GetCurrentVoxelItem() const { return CurrentVoxelItem; }
-	UFUNCTION(BlueprintPure, Category = Voxel)
-		FORCEINLINE TArray<FVoxelItemInfo> GetQuickSlotVoxelItemArray() const { return QuickSlotVoxelItemArray; }
+	UFUNCTION(BlueprintPure, Category = QuickSlot)
+		UQuickSlot* GetQuickSlotUI() const { return QuickSlotUI; }
 
-	UFUNCTION(BlueprintCallable, Category = Voxel)
-		void SetCurrentVoxelItem(const FVoxelItemInfo& VoxelInfo);
-	UFUNCTION(BlueprintCallable, Category = Voxel)
-		void SetCurrentVoxelItemWithIndex(int32 index);
-	UFUNCTION(BlueprintCallable, Category = Voxel)
-		void SetQuickSlotVoxelItemArray(EVoxelType inVoxelType, int32 num, int32 index);
 
 public:
 	// Called every frame
