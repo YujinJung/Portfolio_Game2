@@ -79,9 +79,15 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
 		int32 DestroyVoxelChunkIndex;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
-		float LootingRadius;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
 		uint8 MaxVoxelItemNum;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
+		float LootingRadius;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UI, meta = (AllowPrivateAccess = true))
+		bool isPause;
+
+
+
 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 		void SetDestroyVoxelValueZero();
@@ -129,6 +135,9 @@ public:
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	UFUNCTION(BlueprintCallable, Category = UI)
+		void PauseGame();
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;

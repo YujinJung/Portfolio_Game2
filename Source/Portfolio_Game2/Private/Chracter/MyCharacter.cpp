@@ -4,6 +4,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
+#include "GameFramework/PlayerController.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
 #include "TimerManager.h"
@@ -46,6 +47,7 @@ AMyCharacter::AMyCharacter()
 	MaxVoxelItemNum = 64;
 
 	LootingRadius = 200.f;
+	isPause = false;
 
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -91,12 +93,18 @@ void AMyCharacter::MoveRight(float Value)
 
 void AMyCharacter::TurnAtRate(float Rate)
 {
-	AddControllerYawInput(Rate * BaseTurnAtRate * GetWorld()->GetDeltaSeconds());
+	if (!isPause)
+	{
+		AddControllerYawInput(Rate * BaseTurnAtRate * GetWorld()->GetDeltaSeconds());
+	}
 }
 
 void AMyCharacter::LookUpAtRate(float Rate)
 {
-	AddControllerPitchInput(Rate * BaseLookUpAtRate * GetWorld()->GetDeltaSeconds());
+	if (!isPause)
+	{
+		AddControllerPitchInput(Rate * BaseLookUpAtRate * GetWorld()->GetDeltaSeconds());
+	}
 }
 
 
@@ -450,6 +458,30 @@ void AMyCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	LootingVoxel();
+}
+
+
+void AMyCharacter::PauseGame()
+{
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+
+	if (PlayerController)
+	{
+		isPause = !isPause;
+
+		if (isPause)
+		{
+			PlayerController->bShowMouseCursor = true;
+			PlayerController->bEnableClickEvents = true;
+			PlayerController->bEnableMouseOverEvents = true;
+		}
+		else if (!isPause)
+		{
+			PlayerController->bShowMouseCursor = false;
+			PlayerController->bEnableClickEvents = false;
+			PlayerController->bEnableMouseOverEvents = false;
+		}
+	}
 }
 
 // Called to bind functionality to input
