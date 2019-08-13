@@ -66,7 +66,7 @@ void AMyCharacter::BeginPlay()
 
 void AMyCharacter::MoveForward(float Value)
 {
-	if ((Controller != NULL) && (Value != 0.f))
+	if ((!isPause) && (Controller != NULL) && (Value != 0.f))
 	{
 		const FRotator Rotation = GetActorRotation();
 		const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
@@ -78,7 +78,7 @@ void AMyCharacter::MoveForward(float Value)
 
 void AMyCharacter::MoveRight(float Value)
 {
-	if ((Controller != NULL) && (Value != 0.f))
+	if ((!isPause) && (Controller != NULL) && (Value != 0.f))
 	{
 		const FRotator Rotation = GetActorRotation();
 		const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
