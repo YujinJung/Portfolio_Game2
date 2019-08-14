@@ -4,6 +4,8 @@
 
 #include "UObject/ObjectMacros.h"
 
+#define LOG(x, ...) UE_LOG(LogTemp, Warning, TEXT(x), __VA_ARGS__)
+
 /*
  * Enum Voxel Type;
  */

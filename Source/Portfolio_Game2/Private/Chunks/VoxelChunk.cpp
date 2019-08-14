@@ -270,6 +270,8 @@ void AVoxelChunk::SetVoxel(const FVector& VoxelLocation, EVoxelType& value)
 	chunkElements[index] = static_cast<int32>(value);
 	value = ret;
 
+	LOG("PlaceVOXEL!!!");
+
 	UpdateMesh();
 }
 

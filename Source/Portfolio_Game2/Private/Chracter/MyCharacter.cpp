@@ -12,7 +12,6 @@
 #include "DestroyedVoxel.h"
 #include "QuickSlot.h"
 
-#define LOG(x, ...) UE_LOG(LogTemp, Warning, TEXT(x), __VA_ARGS__)
 
 AMyCharacter::AMyCharacter()
 {
@@ -251,8 +250,11 @@ void AMyCharacter::PlaceVoxel()
 	FHitResult Hit;
 	int32 index;
 
+	static int ii = 0;
+
 	if (CheckVoxel(Hit, index))
 	{
+		LOG("Hit!! %d", ++ii);
 		FVector VoxelLocalLocation = Hit.Location - ChunkArray[index]->GetActorLocation() + Hit.Normal;
 		EVoxelType PlaceVoxelType = QuickSlotUI->GetCurrentVoxelItem().VoxelType;
 		ChunkArray[index]->SetVoxel(VoxelLocalLocation, PlaceVoxelType);
