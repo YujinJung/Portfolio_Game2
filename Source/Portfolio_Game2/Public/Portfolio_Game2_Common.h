@@ -19,6 +19,17 @@ enum class EVoxelType : uint8
 	Count
 };
 
+/*
+ * Inventory Type;
+ */
+UENUM(BlueprintType)
+enum class EInventoryType : uint8
+{
+	QuickSlot,
+	Inventory,
+	MoveItem,
+};
+
 /**
  * 
  */

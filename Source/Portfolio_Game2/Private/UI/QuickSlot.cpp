@@ -7,6 +7,7 @@
 UQuickSlot::UQuickSlot()
 {
 	MaxVoxelItemNum = 64;
+	InventoryVoxelItemArray.Init(FVoxelItemInfo(), 27);
 	QuickSlotVoxelItemArray.Init(FVoxelItemInfo(), 9);
 	CurrentVoxelItem = QuickSlotVoxelItemArray[0];
 }
@@ -99,5 +100,57 @@ void UQuickSlot::SetQuickSlotVoxelItemArray(EVoxelType inVoxelType, int32 num, i
 	{
 		QuickSlotVoxelItemArray[index].VoxelType = inVoxelType;
 		QuickSlotVoxelItemArray[index].Num = num;
+	}
+}
+
+void UQuickSlot::SetItemArray(EInventoryType InvenType, int32 index, FVoxelItemInfo ItemInfo)
+{
+	if (InvenType == EInventoryType::QuickSlot)
+	{
+		QuickSlotVoxelItemArray[index] = ItemInfo;
+	}
+	else if (InvenType == EInventoryType::Inventory)
+	{
+		InventoryVoxelItemArray[index] = ItemInfo;
+	}
+	else
+	{
+		LOG("NOT ARRAY");
+	}
+
+	return;
+}
+
+TArray<FVoxelItemInfo> UQuickSlot::GetItemArray(EInventoryType InvenType)
+{
+	if (InvenType == EInventoryType::QuickSlot)
+	{
+		return QuickSlotVoxelItemArray;
+	}
+	else if (InvenType == EInventoryType::Inventory)
+	{
+		return InventoryVoxelItemArray;
+	}
+	else
+	{
+		LOG("NOT ARRAY");
+		return TArray<FVoxelItemInfo>();
+	}
+}
+
+FVoxelItemInfo UQuickSlot::GetItemArrayByIndex(EInventoryType InvenType, int32 index)
+{
+	if (InvenType == EInventoryType::QuickSlot)
+	{
+		return QuickSlotVoxelItemArray[index];
+	}
+	else if (InvenType == EInventoryType::Inventory)
+	{
+		return InventoryVoxelItemArray[index];
+	}
+	else
+	{
+		LOG("NOT ARRAY");
+		return FVoxelItemInfo();
 	}
 }

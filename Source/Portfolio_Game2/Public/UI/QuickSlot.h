@@ -19,7 +19,10 @@ public:
 	UQuickSlot();
 
 private:
-		// Quick Slot
+	// Inventory
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = QuickSlot, meta = (AllowPrivateAccess = true))
+		TArray<FVoxelItemInfo> InventoryVoxelItemArray;
+	// Quick Slot
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = QuickSlot, meta = (AllowPrivateAccess = true))
 		TArray<FVoxelItemInfo> QuickSlotVoxelItemArray;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = QuickSlot, meta = (AllowPrivateAccess = true))
@@ -48,4 +51,10 @@ public:
 		void SetCurrentVoxelItemWithIndex(int32 index);
 	UFUNCTION(BlueprintCallable, Category = QuickSlot)
 		void SetQuickSlotVoxelItemArray(EVoxelType inVoxelType, int32 num, int32 index);
+	UFUNCTION(BlueprintCallable, Category = QuickSlot)
+		void SetItemArray(EInventoryType InvenType, int32 index, FVoxelItemInfo ItemInfo);
+	UFUNCTION(BlueprintPure, Category = QuickSlot)
+		TArray<FVoxelItemInfo> GetItemArray(EInventoryType InvenType);
+	UFUNCTION(BlueprintPure, Category = QuickSlot)
+		FVoxelItemInfo GetItemArrayByIndex(EInventoryType InvenType, int32 index);
 };
