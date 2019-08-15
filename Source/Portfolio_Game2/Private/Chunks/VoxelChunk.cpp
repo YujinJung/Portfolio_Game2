@@ -9,22 +9,22 @@
 const int32 bTriangles[] = { 2, 1, 0, 0, 3, 2 }; // draw triangle order
 const FVector2D bUVs[] = { FVector2D(0.000000, 0.000000), FVector2D(0.000000, 1.000000), FVector2D(1.000000, 1.000000), FVector2D(1.000000, 0.000000) };
 // top
-const FVector bNormals0[] = { FVector(0, 0, 1), FVector(0, 0, 1), FVector(0, 0, 1), FVector(0, 0, 1) };		
+const FVector bNormals0[] = { FVector(0, 0, 1), FVector(0, 0, 1), FVector(0, 0, 1), FVector(0, 0, 1) };
 
 // bot
-const FVector bNormals1[] = { FVector(0, 0, -1), FVector(0, 0, -1), FVector(0, 0, -1), FVector(0, 0, -1) }; 
+const FVector bNormals1[] = { FVector(0, 0, -1), FVector(0, 0, -1), FVector(0, 0, -1), FVector(0, 0, -1) };
 
 // right
-const FVector bNormals2[] = { FVector(0, 1, 0), FVector(0, 1, 0), FVector(0, 1, 0), FVector(0, 1, 0)};		
+const FVector bNormals2[] = { FVector(0, 1, 0), FVector(0, 1, 0), FVector(0, 1, 0), FVector(0, 1, 0) };
 
 // left
-const FVector bNormals3[] = { FVector(0, -1, 0), FVector(0, -1, 0), FVector(0, -1, 0), FVector(0, -1, 0)};	
+const FVector bNormals3[] = { FVector(0, -1, 0), FVector(0, -1, 0), FVector(0, -1, 0), FVector(0, -1, 0) };
 
 // front
-const FVector bNormals4[] = { FVector(1, 0, 0), FVector(1, 0, 0), FVector(1, 0, 0), FVector(1, 0, 0) };		
+const FVector bNormals4[] = { FVector(1, 0, 0), FVector(1, 0, 0), FVector(1, 0, 0), FVector(1, 0, 0) };
 
 // back
-const FVector bNormals5[] = { FVector(-1, 0, 0), FVector(-1, 0, 0), FVector(-1, 0, 0), FVector(-1, 0, 0) }; 
+const FVector bNormals5[] = { FVector(-1, 0, 0), FVector(-1, 0, 0), FVector(-1, 0, 0), FVector(-1, 0, 0) };
 const FVector bMask[] = { FVector(0.000000, 0.000000, 1.000000),FVector(0.000000, 0.000000, -1.000000),FVector(0.000000, 1.000000, 0.000000),FVector(0.000000, -1.000000, 0.000000), FVector(1.000000, 0.000000, 0.000000), FVector(-1.000000, 0.000000, 0.000000) };
 
 
@@ -62,9 +62,9 @@ AVoxelChunk::AVoxelChunk()
 float AVoxelChunk::CalcDensity(float x, float y, float z)
 {
 	const float cliffScale = 7.f;
-	const float noiseScale = 3.f;
+	const float noiseScale = 5.f;
 	const float offset = 5.f;
-	float noise = USimplexNoiseBPLibrary::SimplexNoise3D(x * 0.02f, y* 0.02f, z*0.01f);
+	float noise = USimplexNoiseBPLibrary::SimplexNoise3D(x * 0.02f, y * 0.02f, z * 0.04f);
 
 	float cliff = (noise * 0.5f + 0.5f) * cliffScale;
 	float density = (noise + cliff) * noiseScale + offset - z;
@@ -135,7 +135,7 @@ void AVoxelChunk::UpdateMesh()
 					{
 						// next or previous Voxel for each side
 						int newIndex = index + bMask[i].X + (bMask[i].Y * chunkXYSize) + (bMask[i].Z * chunkXYSizeX2);
-						
+
 						bool flag = true;
 
 						FVector newIndexVector(x, y, z);
@@ -146,7 +146,7 @@ void AVoxelChunk::UpdateMesh()
 							(newIndexVector.Z < chunkZSize) && (newIndexVector.Z >= 0))
 						{
 							if (newIndex < chunkElements.Num() && newIndex >= 0)
-								if(chunkElements[newIndex] > 0)
+								if (chunkElements[newIndex] > 0)
 									flag = false;
 						}
 
@@ -231,7 +231,7 @@ void AVoxelChunk::UpdateMesh()
 							// color.R - VoxelType, color.G - DestroyVoxelStage
 							int32 DestroyStageMatIndex = chunkElements[index] / 100;
 							FColor color(FColor(chunkElements[index] - (static_cast<float>(DestroyStageMatIndex) * 100), DestroyStageMatIndex, 255, i));
-													
+
 							for (int j = 0; j < 4; ++j)
 							{
 								VertexColors.Add(color);
@@ -269,8 +269,6 @@ void AVoxelChunk::SetVoxel(const FVector& VoxelLocation, EVoxelType& value)
 	EVoxelType ret = static_cast<EVoxelType>(chunkElements[index]);
 	chunkElements[index] = static_cast<int32>(value);
 	value = ret;
-
-	LOG("PlaceVOXEL!!!");
 
 	UpdateMesh();
 }
