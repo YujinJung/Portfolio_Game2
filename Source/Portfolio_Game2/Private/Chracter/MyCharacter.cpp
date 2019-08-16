@@ -250,13 +250,11 @@ void AMyCharacter::PlaceVoxel()
 	FHitResult Hit;
 	int32 index;
 
-	static int ii = 0;
-
 	if (CheckVoxel(Hit, index))
 	{
-		LOG("Hit!! %d", ++ii);
 		FVector VoxelLocalLocation = Hit.Location - ChunkArray[index]->GetActorLocation() + Hit.Normal;
 		EVoxelType PlaceVoxelType = QuickSlotUI->GetCurrentVoxelItem().VoxelType;
+		QuickSlotUI->CurrentVoxelMinusOne();
 		ChunkArray[index]->SetVoxel(VoxelLocalLocation, PlaceVoxelType);
 	}
 }

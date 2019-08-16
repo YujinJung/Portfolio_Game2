@@ -9,7 +9,6 @@ UQuickSlot::UQuickSlot()
 	MaxVoxelItemNum = 64;
 	InventoryVoxelItemArray.Init(FVoxelItemInfo(), 27);
 	QuickSlotVoxelItemArray.Init(FVoxelItemInfo(), 9);
-	CurrentVoxelItem = QuickSlotVoxelItemArray[0];
 }
 
 /*
@@ -34,7 +33,9 @@ bool UQuickSlot::LootingVoxel(const FVoxelItemInfo& LootingVoxelItem)
 
 bool UQuickSlot::isValidCurrentVoxelItem() const
 {
-	if ((CurrentVoxelItem.VoxelType == EVoxelType::Empty) || (CurrentVoxelItem.VoxelType == EVoxelType::Count))
+	auto& cVoxelItem = QuickSlotVoxelItemArray[CurrentVoxelItemIndex];
+
+	if ((cVoxelItem.VoxelType == EVoxelType::Empty) || (cVoxelItem.VoxelType == EVoxelType::Count))
 	{
 		return false;
 	}
@@ -83,14 +84,14 @@ void UQuickSlot::SetCurrentVoxelItem(const FVoxelItemInfo& VoxelInfo)
 		return;
 	}
 
-	CurrentVoxelItem = VoxelInfo;
+	QuickSlotVoxelItemArray[CurrentVoxelItemIndex] = VoxelInfo;
 }
 
-void UQuickSlot::SetCurrentVoxelItemWithIndex(int32 index)
+void UQuickSlot::SetCurrentVoxelItemByIndex(int32 index)
 {
 	if ((0 <= index) && (index <= 9))
 	{
-		CurrentVoxelItem = QuickSlotVoxelItemArray[index];
+		CurrentVoxelItemIndex = index;
 	}
 }
 
@@ -152,5 +153,21 @@ FVoxelItemInfo UQuickSlot::GetItemArrayByIndex(EInventoryType InvenType, int32 i
 	{
 		LOG("NOT ARRAY");
 		return FVoxelItemInfo();
+	}
+}
+
+void UQuickSlot::CurrentVoxelMinusOne()
+{
+	auto& cQuickSlotItemInfo= QuickSlotVoxelItemArray[CurrentVoxelItemIndex];
+
+	if (cQuickSlotItemInfo.Num > 0)
+	{
+		QuickSlotVoxelItemArray[CurrentVoxelItemIndex].Num--;
+	}
+
+	if (cQuickSlotItemInfo.Num <= 0)
+	{
+		cQuickSlotItemInfo.VoxelType = EVoxelType::Empty;
+		cQuickSlotItemInfo.Num = 0;
 	}
 }

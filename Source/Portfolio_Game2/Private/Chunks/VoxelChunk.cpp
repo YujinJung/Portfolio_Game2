@@ -28,6 +28,18 @@ const FVector bNormals5[] = { FVector(-1, 0, 0), FVector(-1, 0, 0), FVector(-1, 
 const FVector bMask[] = { FVector(0.000000, 0.000000, 1.000000),FVector(0.000000, 0.000000, -1.000000),FVector(0.000000, 1.000000, 0.000000),FVector(0.000000, -1.000000, 0.000000), FVector(1.000000, 0.000000, 0.000000), FVector(-1.000000, 0.000000, 0.000000) };
 
 
+struct FVoxelChunkSection
+{
+	TArray<FVector> Vertices;
+	TArray<int32> Triangles;
+	TArray<FVector> Normals;
+	TArray<FVector2D> UV;
+	TArray<FColor> VertexColors;
+	TArray<FProcMeshTangent> Tangents;
+
+	int32 elementID = 0;
+};
+
 // Sets default values
 AVoxelChunk::AVoxelChunk()
 {
@@ -50,12 +62,28 @@ AVoxelChunk::AVoxelChunk()
 	DestroyStage = 0.f;
 	CurrentDestroyVoxelIndex = -1;
 
-	FString MaterialPath(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Voxel"));
-	VoxelMaterials = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
+	/*{
+		FString MaterialPath(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Voxel"));
+		VoxelMaterials = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
 
-	if (VoxelMaterials)
+		if (VoxelMaterials)
+		{
+			VoxelMeshComponent->SetMaterial(0, VoxelMaterials);
+		}
+	}*/
+	
+	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Dirt"));
+	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Grass"));
+	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Sand"));
+}
+
+void AVoxelChunk::SetVoxelMaterial(FString MaterialPath)
+{
+	UMaterial* VoxelMaterial = Cast <UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
+
+	if (VoxelMaterial)
 	{
-		VoxelMeshComponent->SetMaterial(0, VoxelMaterials);
+		VoxelMaterials.Add(VoxelMaterial);
 	}
 }
 
@@ -112,14 +140,9 @@ void AVoxelChunk::GenerateChunk(const FVector& ChunkLocation)
 
 void AVoxelChunk::UpdateMesh()
 {
-	TArray<FVector> Vertices;
-	TArray<int32> Triangles;
-	TArray<FVector> Normals;
-	TArray<FVector2D> UV;
-	TArray<FColor> VertexColors;
-	TArray<FProcMeshTangent> Tangents;
+	TArray<FVoxelChunkSection> ChunkSection;
+	ChunkSection.SetNum(VoxelMaterials.Num());
 
-	int32 elementID = 0;
 	for (int32 x = 0; x < chunkXYSize; ++x)
 	{
 		for (int32 y = 0; y < chunkXYSize; ++y)
@@ -127,9 +150,20 @@ void AVoxelChunk::UpdateMesh()
 			for (int32 z = 0; z < chunkZSize; ++z)
 			{
 				int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
-
-				if (chunkElements[index] > 0)
+				/* TODO : Make Destroy Stage Variable */
+				int32 VoxelMeshIndex = chunkElements[index] - (static_cast<float>(chunkElements[index] / 100) * 100);
+				VoxelMeshIndex--;
+				if (VoxelMeshIndex >= 0)
 				{
+					int32& elementID = ChunkSection[VoxelMeshIndex].elementID;
+					TArray<FVector>& Vertices = ChunkSection[VoxelMeshIndex].Vertices;
+					TArray<int32>& Triangles = ChunkSection[VoxelMeshIndex].Triangles;
+					TArray<FVector>& Normals = ChunkSection[VoxelMeshIndex].Normals;
+					TArray<FVector2D>& UV = ChunkSection[VoxelMeshIndex].UV;
+					TArray<FColor>& VertexColors = ChunkSection[VoxelMeshIndex].VertexColors;
+					TArray<FProcMeshTangent>& Tangents = ChunkSection[VoxelMeshIndex].Tangents;
+
+			
 					int triangleVerticeNum = 0;
 					for (int i = 0; i < 6; ++i)
 					{
@@ -248,8 +282,20 @@ void AVoxelChunk::UpdateMesh()
 
 	VoxelMeshComponent->ClearAllMeshSections();
 
-	VoxelMeshComponent->CreateMeshSection(0, Vertices, Triangles, Normals, UV, VertexColors, Tangents, true);
+	for (int SectionIndex = 0; SectionIndex < ChunkSection.Num(); ++SectionIndex)
+	{
+		auto& c = ChunkSection[SectionIndex];
 
+		if (c.Vertices.Num() > 0)
+		{
+			VoxelMeshComponent->CreateMeshSection(SectionIndex, c.Vertices, c.Triangles, c.Normals, c.UV, c.VertexColors, c.Tangents, true);
+		}
+	}
+
+	for (int MaterialIndex = 0; MaterialIndex < VoxelMaterials.Num(); ++MaterialIndex)
+	{
+		VoxelMeshComponent->SetMaterial(MaterialIndex, VoxelMaterials[MaterialIndex]);
+	}
 }
 
 /*

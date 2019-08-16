@@ -7,6 +7,8 @@
 #include "Portfolio_Game2_Common.h"
 #include "VoxelChunk.generated.h"
 
+
+
 UCLASS()
 class PORTFOLIO_GAME2_API AVoxelChunk : public AActor
 {
@@ -24,6 +26,9 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	float CalcDensity(float x, float y, float z);
+
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	void SetVoxelMaterial(FString MaterialPath);
 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	void GenerateChunk(const FVector& PlayerLocation);
@@ -46,9 +51,9 @@ private:
 	UPROPERTY()
 	class UProceduralMeshComponent* VoxelMeshComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
+	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
 	class UMaterial* VoxelMaterials;
-
+*/
 	UPROPERTY(EditAnywhere)
 	int32 chunkZSize;
 	UPROPERTY(EditAnywhere)
@@ -68,6 +73,9 @@ private:
 	
 	UPROPERTY()
 	TArray<int32> chunkElements;
+	UPROPERTY()
+	TArray<class UMaterial*> VoxelMaterials;
+
 
 	// Destroy
 	UPROPERTY()
