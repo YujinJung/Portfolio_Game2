@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "VoxelChunk.h"
 #include "SimplexNoiseBPLibrary.h"
 #include "ProceduralMeshComponent.h"
@@ -62,6 +61,9 @@ AVoxelChunk::AVoxelChunk()
 	DestroyStage = 0.f;
 	CurrentDestroyVoxelIndex = -1;
 
+	MaxDestroyValue = 80.f;
+	DestroySpeed = 1.f;
+
 	/*{
 		FString MaterialPath(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Voxel"));
 		VoxelMaterials = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
@@ -71,7 +73,6 @@ AVoxelChunk::AVoxelChunk()
 			VoxelMeshComponent->SetMaterial(0, VoxelMaterials);
 		}
 	}*/
-	
 	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Dirt"));
 	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Grass"));
 	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Sand"));
@@ -79,7 +80,7 @@ AVoxelChunk::AVoxelChunk()
 
 void AVoxelChunk::SetVoxelMaterial(FString MaterialPath)
 {
-	UMaterial* VoxelMaterial = Cast <UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
+	UMaterial* VoxelMaterial = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
 
 	if (VoxelMaterial)
 	{
@@ -137,7 +138,6 @@ void AVoxelChunk::GenerateChunk(const FVector& ChunkLocation)
 
 	UpdateMesh();
 }
-
 void AVoxelChunk::UpdateMesh()
 {
 	TArray<FVoxelChunkSection> ChunkSection;
@@ -153,6 +153,7 @@ void AVoxelChunk::UpdateMesh()
 				/* TODO : Make Destroy Stage Variable */
 				int32 VoxelMeshIndex = chunkElements[index] - (static_cast<float>(chunkElements[index] / 100) * 100);
 				VoxelMeshIndex--;
+
 				if (VoxelMeshIndex >= 0)
 				{
 					int32& elementID = ChunkSection[VoxelMeshIndex].elementID;
@@ -163,7 +164,7 @@ void AVoxelChunk::UpdateMesh()
 					TArray<FColor>& VertexColors = ChunkSection[VoxelMeshIndex].VertexColors;
 					TArray<FProcMeshTangent>& Tangents = ChunkSection[VoxelMeshIndex].Tangents;
 
-			
+
 					int triangleVerticeNum = 0;
 					for (int i = 0; i < 6; ++i)
 					{
@@ -263,7 +264,11 @@ void AVoxelChunk::UpdateMesh()
 
 							auto density = CalcDensity(x, y, z);
 							// color.R - VoxelType, color.G - DestroyVoxelStage
-							int32 DestroyStageMatIndex = chunkElements[index] / 100;
+							int32 DestroyStageMatIndex = 0;
+							if (index == CurrentDestroyVoxelIndex)
+							{
+								DestroyStageMatIndex = DestroyStage / 10.f;
+							}
 							FColor color(FColor(chunkElements[index] - (static_cast<float>(DestroyStageMatIndex) * 100), DestroyStageMatIndex, 255, i));
 
 							for (int j = 0; j < 4; ++j)
@@ -275,7 +280,6 @@ void AVoxelChunk::UpdateMesh()
 					}
 					elementID += triangleVerticeNum;
 				}
-
 			}
 		}
 	}
@@ -335,24 +339,22 @@ bool AVoxelChunk::DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, floa
 	// Change Destroy Voxel
 	if (index != CurrentDestroyVoxelIndex)
 	{
-		if (CurrentDestroyVoxelIndex != -1)
-		{
-			// Clear Stage
-			chunkElements[CurrentDestroyVoxelIndex] %= 100;
-		}
+		//if (CurrentDestroyVoxelIndex != -1)
+		//{
+		//	// Clear Stage
+		//	chunkElements[CurrentDestroyVoxelIndex] %= 100;
+		//}
 
-		DestroyStage = 0;
+		DestroyStage = 0.f;
 		CurrentDestroyVoxelIndex = index;
 	}
 
 	// Stage - 100 200 300 ...
 	// Voxel Type - 0 1 2 3 4 ..
-	uint8 stage = DestroyStage / 10;
-	chunkElements[CurrentDestroyVoxelIndex] %= 100;
-	chunkElements[CurrentDestroyVoxelIndex] += stage * 100;
+	uint8 stage = DestroyStage / 10.f;
 
 	// Destroy Final Stage
-	if (DestroyStage >= 100.f)
+	if (DestroyStage >= MaxDestroyValue)
 	{
 		InitDestroyVoxel();
 
@@ -367,16 +369,17 @@ bool AVoxelChunk::DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, floa
 	}
 
 	UpdateMesh();
-	DestroyStage += Value;
+
+	DestroyStage += Value * DestroySpeed;
 	return false;
 }
 
 void AVoxelChunk::InitDestroyVoxel()
 {
-	if (CurrentDestroyVoxelIndex >= 0)
-	{
-		chunkElements[CurrentDestroyVoxelIndex] %= 100;
-	}
+	//if (CurrentDestroyVoxelIndex >= 0)
+	//{
+	//	chunkElements[CurrentDestroyVoxelIndex] %= 100;
+	//}
 	CurrentDestroyVoxelIndex = -1;
 	CurrentDestroyVoxelType = EVoxelType::Empty;
 	DestroyStage = 0.f;

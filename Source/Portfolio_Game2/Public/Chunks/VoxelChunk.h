@@ -84,4 +84,8 @@ private:
 	EVoxelType CurrentDestroyVoxelType;
 	UPROPERTY()
 	float DestroyStage;
+	UPROPERTY()
+	float DestroySpeed; // speed
+	UPROPERTY()
+	float MaxDestroyValue;
 };

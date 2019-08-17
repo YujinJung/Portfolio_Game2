@@ -17,4 +17,8 @@ class PORTFOLIO_GAME2_API UVoxelMaterial : public UMaterial
 public:
 	UVoxelMaterial();
 	
+	int32 scale;
+
+	void RefreshMaterial();
+
 };

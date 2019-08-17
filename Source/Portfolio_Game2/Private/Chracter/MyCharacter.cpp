@@ -276,10 +276,9 @@ void AMyCharacter::DestroyVoxel(float Value)
 
 			FVector DirectionVector = (Hit.Location - GetActorLocation()).GetSafeNormal();
 			FVector HitLocation = Hit.Location + DirectionVector;
-
-			//LOG("Hit : %s , HitLocation : %s, index : %d", *Hit.GetActor()->GetActorLocation().ToString(), *HitLocation.ToString(), index);
 			FVector VoxelLocalLocation = HitLocation - ChunkArray[index]->GetActorLocation();
 
+			// DestroyedVoxelType - Return the type of destroyed voxel
 			EVoxelType DestroyedVoxelType = EVoxelType::Empty;
 			if (ChunkArray[index]->DestroyVoxel(VoxelLocalLocation, DestroyedVoxelType, Value))
 			{
