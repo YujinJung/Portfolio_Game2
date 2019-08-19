@@ -87,7 +87,7 @@ float AVoxelChunk::CalcDensity(float x, float y, float z)
 	const float cliffScale = 7.f;
 	const float noiseScale = 5.f;
 	const float offset = 5.f;
-	float noise = USimplexNoiseBPLibrary::SimplexNoise3D(x * 0.02f, y * 0.02f, z * 0.04f);
+	float noise = USimplexNoiseBPLibrary::SimplexNoise3D(x * 0.02f, y * 0.02f, z * 0.03f);
 
 	float cliff = (noise * 0.5f + 0.5f) * cliffScale;
 	float density = (noise + cliff) * noiseScale + offset - z;

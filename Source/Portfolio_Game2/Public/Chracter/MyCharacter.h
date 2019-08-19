@@ -102,15 +102,13 @@ private:
 public:
 	UFUNCTION(BlueprintCallable, Category = Chunk)
 	void InitChunkMap();
-	UFUNCTION()
-	bool GenerateChunk(const FVector2D& CurrentIndex, int UpdateIndex);
 	// Create / Update / Destory Chunk
 	UFUNCTION(BlueprintCallable, Category = Chunk)
 		void UpdateChunkMap();
 	UFUNCTION(BlueprintCallable, Category = Chunk)
 		void RemoveChunk();
 	UFUNCTION(BlueprintCallable, Category = Chunk)
-		bool CheckRadius(const FVector& ChunkCoord, const float& Radius);
+		bool CheckRadius(const FVector& ChunkCoord, const float Radius);
 
 	// Place / Destroy Voxel 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
@@ -128,10 +126,6 @@ public:
 		void LootingVoxel();
 	UFUNCTION(BlueprintPure, Category = QuickSlot)
 		UQuickSlot* GetQuickSlotUI() const { return QuickSlotUI; }
-
-	UFUNCTION()
-		FORCEINLINE int32 CalculateIndex(const int& ux, const int& uy) { return ((4 - (uy + 3)) * 3 + (ux + 1)); };
-
 
 public:
 	// Called every frame

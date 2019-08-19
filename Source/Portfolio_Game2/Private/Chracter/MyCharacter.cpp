@@ -12,13 +12,6 @@
 #include "DestroyedVoxel.h"
 #include "QuickSlot.h"
 
-// 0 - 1 3 , 2 - 1 5 , 6 - 3 7 , 8 - 7 5
-FVector2D UpdateChunkCoord[3][3] = {
-		{FVector2D(-1, 1), FVector2D(0, 1), FVector2D(1, 1)},
-		{FVector2D(-1, 0), FVector2D(0, 0), FVector2D(1, 0)},
-		{FVector2D(-1, -1), FVector2D(0, -1), FVector2D(1, -1)},
-};
-
 AMyCharacter::AMyCharacter()
 {
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 150.f);
@@ -46,7 +39,7 @@ AMyCharacter::AMyCharacter()
 	VoxelRangeInChunkX2 = VoxelRangeInChunk * 2;
 	ChunkSize = VoxelRangeInChunk * VoxelSize;
 
-	ChunkRangeInWorld = 8;
+	ChunkRangeInWorld = 16;
 	MaxChunkRadius = ChunkSize * ChunkRangeInWorld;
 
 	DestroyVoxelChunkIndex = -1;
@@ -65,7 +58,7 @@ void AMyCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	InitChunkMap();
-	GetWorldTimerManager().SetTimer(MapLoadTimerHandle, this, &AMyCharacter::CheckPlayerStandChunk, 0.1f, true);
+	GetWorldTimerManager().SetTimer(MapLoadTimerHandle, this, &AMyCharacter::UpdateChunkMap, 0.1f, true);
 
 	QuickSlotUI = NewObject<UQuickSlot>();
 }
@@ -112,113 +105,10 @@ void AMyCharacter::LookUpAtRate(float Rate)
 
 void AMyCharacter::InitChunkMap()
 {
-	FVector PlayerLocation = GetActorLocation();
-	PlayerLocation /= ChunkSize;
-	const int x = floor(PlayerLocation.X);
-	const int y = floor(PlayerLocation.Y);
-
-	for (int i = -ChunkRangeInWorld; i <= ChunkRangeInWorld; ++i)
+	for (int index = 0; index < 4 * ChunkRangeInWorld + 1; ++index)
 	{
-		for (int j = -ChunkRangeInWorld; j <= ChunkRangeInWorld; ++j)
-		{
-			FVector2D CurrentIndex(x + i, y + j);
-			/*if (CheckRadius(FVector(CurrentIndex * ChunkSize, 0.f), MaxChunkRadius))
-			{
-				AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(CurrentIndex * ChunkSize, 0.f), FRotator::ZeroRotator);
-
-				SpawnChunk->GenerateChunk(FVector(CurrentIndex, 0.f));
-
-				ChunkCoordArray.Add(CurrentIndex);
-				ChunkArray.Add(MoveTemp(SpawnChunk));
-			}*/
-
-		
-			// Need spawn chunk
-			// 0, 1, 2
-			const int UpdateRowIndex = (i / ChunkRangeInWorld) + 1;
-			const int UpdateColIndex = (j / ChunkRangeInWorld) + 1;
-			const FVector2D UpdateOffset = UpdateChunkCoord[UpdateRowIndex][UpdateColIndex];
-			int UpdateIndex = CalculateIndex(UpdateOffset.X, UpdateOffset.Y);
-
-			GenerateChunk(CurrentIndex, UpdateIndex);
-			/*
-			 * 12 
-			 * 3*   Draw 1,2 3 
-			 */
-			/*if ((UpdateIndex.X != 0) && (UpdateIndex.Y != 0))
-			{
-				// Draw 1
-				UpdateChunkArray.Add(FVector(CurrentIndex + FVector2D(UpdateIndex.X, UpdateIndex.Y), CurIndex));
-
-				// Draw 2 
-				const int xIndex = (UpdateRowIndex + 1) % 2;
-				CurIndex = CalculateIndex(xIndex, UpdateIndex.Y);
-				UpdateChunkArray.Add(FVector(CurrentIndex + FVector2D(UpdateIndex.X, 0.f), CurIndex));
-
-				// Draw 3 
-				const int yIndex = (UpdateColIndex + 1) % 2;
-				CurIndex = CalculateIndex(UpdateIndex.X, yIndex);
-				UpdateChunkArray.Add(FVector(CurrentIndex + FVector2D(0, UpdateIndex.Y), CurIndex));
-			}
-			else if (UpdateIndex.X != 0)
-			{
-				UpdateChunkArray.Add(FVector(CurrentIndex + FVector2D(UpdateIndex.X, 0.f), CurIndex));
-			}
-			else if (UpdateIndex.Y != 0)
-			{
-				UpdateChunkArray.Add(FVector(CurrentIndex + FVector2D(0, UpdateIndex.Y), CurIndex));
-			}*/
-		}
+		UpdateChunkMap();
 	}
-}
-
-bool AMyCharacter::GenerateChunk(const FVector2D& CurrentIndex, int UpdateIndex)
-{
-	int UpdateXIndex = UpdateIndex / 3;
-	int UpdateYIndex = UpdateIndex % 3;
-	const FVector2D Offset = UpdateChunkCoord[UpdateXIndex][UpdateYIndex];
-
-	if (CheckRadius(FVector(CurrentIndex * ChunkSize, 0.f), MaxChunkRadius))
-	{
-		AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(CurrentIndex * ChunkSize, 0.f), FRotator::ZeroRotator);
-
-		SpawnChunk->GenerateChunk(FVector(CurrentIndex, 0.f));
-
-		ChunkCoordArray.Add(CurrentIndex);
-		ChunkArray.Add(MoveTemp(SpawnChunk));
-
-		/*
-		 * 12
-		 * 3*   Draw 1,2 3
-		 */
-		if ((Offset.X != 0) && (Offset.Y != 0))
-		{
-			// Draw 1
-			UpdateChunkArray.Add(FVector(Offset + FVector2D(Offset.X, Offset.Y), UpdateIndex));
-
-			// Draw 2 
-			const int xIndex = (UpdateXIndex + 1) % 2;
-			UpdateIndex = CalculateIndex(xIndex, Offset.Y);
-			UpdateChunkArray.Add(FVector(Offset + FVector2D(Offset.X, 0.f), UpdateIndex));
-
-			// Draw 3 
-			const int yIndex = (UpdateYIndex + 1) % 2;
-			UpdateIndex = CalculateIndex(Offset.X, yIndex);
-			UpdateChunkArray.Add(FVector(Offset + FVector2D(0, Offset.Y), UpdateIndex));
-		}
-		else if (Offset.X != 0)
-		{
-			UpdateChunkArray.Add(FVector(Offset + FVector2D(Offset.X, 0.f), UpdateIndex));
-		}
-		else if (Offset.Y != 0)
-		{
-			UpdateChunkArray.Add(FVector(Offset + FVector2D(0, Offset.Y), UpdateIndex));
-		}
-
-		return true;
-	}
-
-	return false;
 }
 
 /*
@@ -227,58 +117,74 @@ bool AMyCharacter::GenerateChunk(const FVector2D& CurrentIndex, int UpdateIndex)
  */
 void AMyCharacter::UpdateChunkMap()
 {
+	static int x_i = 0; // 0 1 2 3 ... ChunkRange 0 1 2 ... 
+	static int y_i = 1; // 1 -1 1 -1
+	static int g_i = 1; // odd even check
+
+	// -ChunkRange ~ 0 | 0 ~ ChunkRange
+	int yStart = (y_i == -1) ? -ChunkRangeInWorld : 0;
+	int yEnd = yStart + ChunkRangeInWorld;
+	if (x_i == 0)
+	{
+		yStart = -ChunkRangeInWorld;
+		yEnd = ChunkRangeInWorld;
+	}
+
 	FVector PlayerLocation = GetActorLocation();
 	PlayerLocation /= ChunkSize;
+
 	const int x = floor(PlayerLocation.X);
 	const int y = floor(PlayerLocation.Y);
 
-	for (int i = 0; i < UpdateChunkArray.Num(); ++i)
+	//for (int j = -ChunkRange; j <= ChunkRange; ++j)
+	for (int j = yStart; j <= yEnd; ++j)
 	{
-		int32 index = UpdateChunkArray[i].Z;
-		FVector2D CheckChunk(x + UpdateChunkArray[i].X, y + UpdateChunkArray[i].Y);
-
-		if(GenerateChunk(CheckChunk, index))
-		{
-			UpdateChunkArray.RemoveAtSwap(i);
-		}
-	}
-
-	/*
-	auto GenerateChunk = [&](FVector2D ChunkIndex)  {
-		if (CheckRadius(FVector(ChunkIndex * ChunkSize, 0.f), MaxChunkRadius))
-		{
-			AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(ChunkIndex * ChunkSize, 0.f), FRotator::ZeroRotator);
-
-			SpawnChunk->GenerateChunk(FVector(ChunkIndex, 0.f));
-
-			ChunkCoordArray.Add(ChunkIndex);
-			ChunkArray.Add(MoveTemp(SpawnChunk));
-		}
- 	};
-
-	static int i = -ChunkRangeInWorld;
-	for (int j = -ChunkRangeInWorld; j <= 0; ++j)
-	{
-		FVector2D CurrentIndex = FVector2D(x + i, y + j);
-		FVector2D CurrentOppositeIndex = FVector2D(x - i, y - j);
+		int CurX = x + x_i;
+		int CurY = y + j;
+		FVector2D CurrentIndex = FVector2D(CurX, CurY);
 
 		if (!ChunkCoordArray.Contains(CurrentIndex))
 		{
-			GenerateChunk(CurrentIndex);
-		}
-		else if (!ChunkCoordArray.Contains(CurrentOppositeIndex))
-		{
-			GenerateChunk(CurrentOppositeIndex);
-		}
-		else
-		{
-			break;
+			if (CheckRadius(FVector(CurrentIndex * ChunkSize, 0.f), MaxChunkRadius))
+			{
+				AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(CurrentIndex * ChunkSize, 0.f), FRotator::ZeroRotator);
+				SpawnChunk->GenerateChunk(FVector(CurrentIndex, 0.f));
+				ChunkCoordArray.Add(CurrentIndex);
+				ChunkArray.Add(MoveTemp(SpawnChunk));
+			}
 		}
 	}
 
+	RemoveChunk();
 
-	i = ((i == ChunkRangeInWorld) ? (-ChunkRangeInWorld) : (i + 1));
-	*/
+
+	// next chunk
+	{
+		// ++ -- -+ +- ++
+		if (x_i == 0)
+		{
+			x_i += 1;
+			return;
+		}
+		else if (g_i == 1) // multiply x and y by -1
+		{
+			x_i *= -1;
+			y_i *= -1;
+			g_i *= -1;
+		}
+		else if (g_i == -1) // multiply y by -1 // if x_i is positive, increase 1.
+		{
+			y_i *= -1;
+			g_i *= -1;
+
+			if ((x_i >= 1) && (y_i == 1))
+			{
+				x_i = (x_i + 1) % ChunkRangeInWorld;
+			}
+		}
+
+		//x_i = (((x_i + ChunkRange) + 1) % (ChunkRangeX2 + 1)) - ChunkRange;
+	}
 }
 
 /*
@@ -297,8 +203,6 @@ void AMyCharacter::RemoveChunk()
 			ChunkArray[i]->Destroy();
 			ChunkArray.RemoveAt(i);
 			ChunkCoordArray.RemoveAt(i);
-
-			continue;
 		}
 	}
 }
@@ -327,7 +231,8 @@ void AMyCharacter::CheckPlayerStandChunk()
 		PlayerStandChunkIndex = PlayerChunkIndex;
 	}
 }
-bool AMyCharacter::CheckRadius(const FVector& ChunkCoord, const float& Radius)
+
+bool AMyCharacter::CheckRadius(const FVector& ChunkCoord, const float Radius)
 {
 	FVector PlayerLocation = GetActorLocation();
 
@@ -350,7 +255,7 @@ bool AMyCharacter::CheckRadius(const FVector& ChunkCoord, const float& Radius)
 
 	if (vectorLength <= Radius)
 	{
-			return true;
+		return true;
 	}
 
 	return false;
