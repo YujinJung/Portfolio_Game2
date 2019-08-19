@@ -52,8 +52,6 @@ ADestroyedVoxel::ADestroyedVoxel()
 
 	FString MaterialPath(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Voxel"));
 	VoxelMaterials = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
-
-	
 }
 
 

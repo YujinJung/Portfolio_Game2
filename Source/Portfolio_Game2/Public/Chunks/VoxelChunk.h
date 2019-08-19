@@ -36,6 +36,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	void UpdateMesh();
 
+	UFUNCTION()
+	void RefreshMesh();
+
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	void SetVoxel(const FVector& VoxelPos, EVoxelType& value);
 	
@@ -47,10 +50,13 @@ public:
 
 	FORCEINLINE const int32 GetChunkXYSize() const { return chunkXYSize; }
 
+	void SetIsRunningTime(bool r);
+
 private:
 	UPROPERTY()
 	class UProceduralMeshComponent* VoxelMeshComponent;
 
+	FTimerHandle MapLoadTimerHandle;
 	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
 	class UMaterial* VoxelMaterials;
 */
@@ -72,10 +78,14 @@ private:
 	int32 voxelHalfSize;
 	
 	UPROPERTY()
-	TArray<int32> chunkElements;
+	TArray<EVoxelType> chunkElements;
+	UPROPERTY()
+	TMap<int32, float> chunkElementsTime; // index, time
+	UPROPERTY()
+	bool isRunningTime;
+
 	UPROPERTY()
 	TArray<class UMaterial*> VoxelMaterials;
-
 
 	// Destroy
 	UPROPERTY()

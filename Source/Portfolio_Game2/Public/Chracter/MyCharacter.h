@@ -63,6 +63,8 @@ private:
 		TArray<FVector2D> ChunkCoordArray;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
 		TArray<AVoxelChunk*> ChunkArray;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+		TArray<FVector> UpdateChunkArray;
 
 	// Voxel
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
@@ -86,6 +88,10 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UI, meta = (AllowPrivateAccess = true))
 		bool isPause;
 
+	// Refresh Chunk
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+		int32 PlayerStandChunkIndex;
+
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 		void SetDestroyVoxelValueZero();
 
@@ -96,13 +102,15 @@ private:
 public:
 	UFUNCTION(BlueprintCallable, Category = Chunk)
 	void InitChunkMap();
+	UFUNCTION()
+	bool GenerateChunk(const FVector2D& CurrentIndex, int UpdateIndex);
 	// Create / Update / Destory Chunk
 	UFUNCTION(BlueprintCallable, Category = Chunk)
 		void UpdateChunkMap();
 	UFUNCTION(BlueprintCallable, Category = Chunk)
 		void RemoveChunk();
 	UFUNCTION(BlueprintCallable, Category = Chunk)
-		bool CheckRadius(const FVector& ChunkCoord, const float Radius);
+		bool CheckRadius(const FVector& ChunkCoord, const float& Radius);
 
 	// Place / Destroy Voxel 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
@@ -112,11 +120,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 		bool CheckVoxel(FHitResult& OutHit, int32& index);
 
+	UFUNCTION()
+	void CheckPlayerStandChunk();
+
 	// Quick Slot / Inventory System
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 		void LootingVoxel();
 	UFUNCTION(BlueprintPure, Category = QuickSlot)
 		UQuickSlot* GetQuickSlotUI() const { return QuickSlotUI; }
+
+	UFUNCTION()
+		FORCEINLINE int32 CalculateIndex(const int& ux, const int& uy) { return ((4 - (uy + 3)) * 3 + (ux + 1)); };
 
 
 public:

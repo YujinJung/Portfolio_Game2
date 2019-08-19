@@ -3,6 +3,7 @@
 #include "VoxelChunk.h"
 #include "SimplexNoiseBPLibrary.h"
 #include "ProceduralMeshComponent.h"
+#include "TimerManager.h"
 #include "Materials/Material.h"
 
 const int32 bTriangles[] = { 2, 1, 0, 0, 3, 2 }; // draw triangle order
@@ -24,8 +25,9 @@ const FVector bNormals4[] = { FVector(1, 0, 0), FVector(1, 0, 0), FVector(1, 0, 
 
 // back
 const FVector bNormals5[] = { FVector(-1, 0, 0), FVector(-1, 0, 0), FVector(-1, 0, 0), FVector(-1, 0, 0) };
-const FVector bMask[] = { FVector(0.000000, 0.000000, 1.000000),FVector(0.000000, 0.000000, -1.000000),FVector(0.000000, 1.000000, 0.000000),FVector(0.000000, -1.000000, 0.000000), FVector(1.000000, 0.000000, 0.000000), FVector(-1.000000, 0.000000, 0.000000) };
 
+// top, bot, side ...
+const FVector bMask[] = { FVector(0.000000, 0.000000, 1.000000),FVector(0.000000, 0.000000, -1.000000),FVector(0.000000, 1.000000, 0.000000),FVector(0.000000, -1.000000, 0.000000), FVector(1.000000, 0.000000, 0.000000), FVector(-1.000000, 0.000000, 0.000000) };
 
 struct FVoxelChunkSection
 {
@@ -63,16 +65,8 @@ AVoxelChunk::AVoxelChunk()
 
 	MaxDestroyValue = 80.f;
 	DestroySpeed = 1.f;
+	isRunningTime = false;
 
-	/*{
-		FString MaterialPath(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Voxel"));
-		VoxelMaterials = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
-
-		if (VoxelMaterials)
-		{
-			VoxelMeshComponent->SetMaterial(0, VoxelMaterials);
-		}
-	}*/
 	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Dirt"));
 	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Grass"));
 	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Sand"));
@@ -115,29 +109,30 @@ void AVoxelChunk::GenerateChunk(const FVector& ChunkLocation)
 				int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
 
 				float density = CalcDensity((ChunkLocation.X * chunkXYSize) + x, (ChunkLocation.Y * chunkXYSize) + y, z);
-
 				if (density >= 0.f)
 				{
 					if (isTop)
 					{
-						chunkElements[index] = 2;
+						chunkElements[index] = EVoxelType::Grass;
 						isTop = false;
 					}
 					else
 					{
-						chunkElements[index] = 1;
+						chunkElements[index] = EVoxelType::Dirt;
 					}
 				}
 				else
 				{
-					chunkElements[index] = 0;
+					chunkElements[index] = EVoxelType::Empty;
 				}
 			}
 		}
 	}
 
+
 	UpdateMesh();
 }
+
 void AVoxelChunk::UpdateMesh()
 {
 	TArray<FVoxelChunkSection> ChunkSection;
@@ -151,7 +146,11 @@ void AVoxelChunk::UpdateMesh()
 			{
 				int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
 				/* TODO : Make Destroy Stage Variable */
-				int32 VoxelMeshIndex = chunkElements[index] - (static_cast<float>(chunkElements[index] / 100) * 100);
+				int32 VoxelMeshIndex = static_cast<int32>(chunkElements[index]);
+				if (chunkElements[index] > EVoxelType::Count)
+				{
+					VoxelMeshIndex -= static_cast<int32>(EVoxelType::Count);
+				}
 				VoxelMeshIndex--;
 
 				if (VoxelMeshIndex >= 0)
@@ -163,7 +162,6 @@ void AVoxelChunk::UpdateMesh()
 					TArray<FVector2D>& UV = ChunkSection[VoxelMeshIndex].UV;
 					TArray<FColor>& VertexColors = ChunkSection[VoxelMeshIndex].VertexColors;
 					TArray<FProcMeshTangent>& Tangents = ChunkSection[VoxelMeshIndex].Tangents;
-
 
 					int triangleVerticeNum = 0;
 					for (int i = 0; i < 6; ++i)
@@ -181,8 +179,20 @@ void AVoxelChunk::UpdateMesh()
 							(newIndexVector.Z < chunkZSize) && (newIndexVector.Z >= 0))
 						{
 							if (newIndex < chunkElements.Num() && newIndex >= 0)
-								if (chunkElements[newIndex] > 0)
+							{
+								// exist side voxel
+								if (chunkElements[newIndex] != EVoxelType::Empty)
+								{
 									flag = false;
+								}
+								else if ((i == 0) && (chunkElements[index] == EVoxelType::Dirt)) // no voxel top side, Grow grass
+								{
+									if (!chunkElementsTime.Contains(index))
+									{
+										chunkElementsTime.Add(index, 0.f);
+									}
+								}
+							}
 						}
 
 						if (flag)
@@ -263,13 +273,19 @@ void AVoxelChunk::UpdateMesh()
 							UV.Append(bUVs, ARRAY_COUNT(bUVs));
 
 							auto density = CalcDensity(x, y, z);
-							// color.R - VoxelType, color.G - DestroyVoxelStage
-							int32 DestroyStageMatIndex = 0;
+
+							// color.R - DestroyVoxelStage, color.G - isChangeVoxel
+							FColor color(0, 0, 0, i);
+							// Destroy Stage
 							if (index == CurrentDestroyVoxelIndex)
 							{
-								DestroyStageMatIndex = DestroyStage / 10.f;
+								color.R = DestroyStage / 10.f;
 							}
-							FColor color(FColor(chunkElements[index] - (static_cast<float>(DestroyStageMatIndex) * 100), DestroyStageMatIndex, 255, i));
+							// Dirt->Grass, ...
+							if (chunkElements[index] > EVoxelType::Count)
+							{
+								color.G = 2;
+							}
 
 							for (int j = 0; j < 4; ++j)
 							{
@@ -303,6 +319,41 @@ void AVoxelChunk::UpdateMesh()
 }
 
 /*
+ * Refresh Mesh
+ * Grow Grass, ...
+ */
+void AVoxelChunk::RefreshMesh()
+{
+	//bool isChange = false;
+
+	//for(auto& e : chunkElementsTime)
+	//{
+	//	if ((chunkElements[e.Key] == EVoxelType::Dirt) && (chunkElements[e.Key] == EVoxelType::Dirt_Grass))
+	//	{
+	//		if (e.Value > 5.0f)
+	//		{
+	//			chunkElements[e.Key] = EVoxelType::Grass;
+	//			chunkElementsTime.Remove(e.Key);
+	//			isChange = true;
+	//			continue;
+	//		}
+	//		else if (e.Value > 3.0f)
+	//		{
+	//			chunkElements[e.Key] = EVoxelType::Dirt_Grass;
+	//			isChange = true;
+	//		}
+
+	//		e.Value += Value;
+	//	}
+	//}
+
+	//if (isChange)
+	//{
+	//	UpdateMesh();
+	//}
+}
+
+/*
  * Set Voxel
  * @param VoxelLocation - Voxel Location
  * @param value			- Set Voxel Type / Return Voxel original type
@@ -316,8 +367,8 @@ void AVoxelChunk::SetVoxel(const FVector& VoxelLocation, EVoxelType& value)
 	int32 z = LocalVoxelLocation.Z / voxelSize;
 
 	int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
-	EVoxelType ret = static_cast<EVoxelType>(chunkElements[index]);
-	chunkElements[index] = static_cast<int32>(value);
+	EVoxelType ret = chunkElements[index];
+	chunkElements[index] = value;
 	value = ret;
 
 	UpdateMesh();
@@ -376,10 +427,6 @@ bool AVoxelChunk::DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, floa
 
 void AVoxelChunk::InitDestroyVoxel()
 {
-	//if (CurrentDestroyVoxelIndex >= 0)
-	//{
-	//	chunkElements[CurrentDestroyVoxelIndex] %= 100;
-	//}
 	CurrentDestroyVoxelIndex = -1;
 	CurrentDestroyVoxelType = EVoxelType::Empty;
 	DestroyStage = 0.f;
@@ -387,10 +434,16 @@ void AVoxelChunk::InitDestroyVoxel()
 	UpdateMesh();
 }
 
+void AVoxelChunk::SetIsRunningTime(bool r)
+{
+	isRunningTime = r;
+}
+
 // Called when the game starts or when spawned
 void AVoxelChunk::BeginPlay()
 {
 	Super::BeginPlay();
+	GetWorldTimerManager().SetTimer(MapLoadTimerHandle, this, &AVoxelChunk::RefreshMesh, 3.f, true);
 }
 
 // Called every frame
