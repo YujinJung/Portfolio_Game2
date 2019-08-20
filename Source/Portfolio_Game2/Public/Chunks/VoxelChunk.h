@@ -7,8 +7,6 @@
 #include "Portfolio_Game2_Common.h"
 #include "VoxelChunk.generated.h"
 
-
-
 UCLASS()
 class PORTFOLIO_GAME2_API AVoxelChunk : public AActor
 {
@@ -56,7 +54,17 @@ private:
 	UPROPERTY()
 	class UProceduralMeshComponent* VoxelMeshComponent;
 
+	UPROPERTY()
+	FVector2D ChunkIndex;
+
 	FTimerHandle MapLoadTimerHandle;
+
+public:
+	FORCEINLINE FVector2D GetChunkIndex() const { return ChunkIndex; }
+
+	void SetChunkIndex(const FVector2D& _chunkIndex);
+
+private:
 	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
 	class UMaterial* VoxelMaterials;
 */

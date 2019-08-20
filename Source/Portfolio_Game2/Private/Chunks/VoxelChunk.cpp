@@ -45,18 +45,18 @@ struct FVoxelChunkSection
 AVoxelChunk::AVoxelChunk()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-
-	chunkZSize = 50;
-	chunkXYSize = 16;
-	chunkXYSizeX2 = chunkXYSize * chunkXYSize;
-	chunkTotalSize = chunkXYSize * chunkXYSize * chunkZSize;
+	PrimaryActorTick.bCanEverTick = false;
 
 	FString name = "Voxel_" + FString::FromInt(chunkXIndex) + "_" + FString::FromInt(chunkYIndex);
-	VoxelMeshComponent = NewObject<UProceduralMeshComponent>(this, *name);
+	VoxelMeshComponent = CreateDefaultSubobject<UProceduralMeshComponent>(*name);
 	VoxelMeshComponent->RegisterComponent();
-
 	RootComponent = VoxelMeshComponent;
+	VoxelMeshComponent->bUseAsyncCooking = true;
+
+	chunkXYSize = 16;
+	chunkXYSizeX2 = chunkXYSize * chunkXYSize;
+	chunkZSize = 16;
+	chunkTotalSize = chunkXYSize * chunkXYSize * chunkZSize;
 
 	voxelSize = 100.f;
 	voxelHalfSize = voxelSize / 2;
@@ -70,8 +70,8 @@ AVoxelChunk::AVoxelChunk()
 	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Dirt"));
 	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Grass"));
 	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Sand"));
+	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Stone"));
 }
-
 void AVoxelChunk::SetVoxelMaterial(FString MaterialPath)
 {
 	UMaterial* VoxelMaterial = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
@@ -82,6 +82,16 @@ void AVoxelChunk::SetVoxelMaterial(FString MaterialPath)
 	}
 }
 
+void AVoxelChunk::SetChunkIndex(const FVector2D& _chunkIndex)
+{
+	ChunkIndex = _chunkIndex;
+	chunkXIndex = _chunkIndex.X;
+	chunkYIndex = _chunkIndex.Y;
+
+}
+
+
+
 float AVoxelChunk::CalcDensity(float x, float y, float z)
 {
 	const float cliffScale = 7.f;
@@ -90,6 +100,7 @@ float AVoxelChunk::CalcDensity(float x, float y, float z)
 	float noise = USimplexNoiseBPLibrary::SimplexNoise3D(x * 0.02f, y * 0.02f, z * 0.03f);
 
 	float cliff = (noise * 0.5f + 0.5f) * cliffScale;
+	//float density = (noise + cliff) * noiseScale + offset - z;
 	float density = (noise + cliff) * noiseScale + offset - z;
 	//UE_LOG(LogTemp, Warning, TEXT("Noise : %.4f"), noise);
 	return density;
@@ -109,7 +120,16 @@ void AVoxelChunk::GenerateChunk(const FVector& ChunkLocation)
 				int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
 
 				float density = CalcDensity((ChunkLocation.X * chunkXYSize) + x, (ChunkLocation.Y * chunkXYSize) + y, z);
-				if (density >= 0.f)
+
+				if (density < 0.f)
+				{
+					chunkElements[index] = EVoxelType::Empty;
+				}
+				else if ((density + ((1 - (z / chunkZSize)) * 4.5f)) >= 5.f)
+				{
+					chunkElements[index] = EVoxelType::Stone;
+				}
+				else if (density >= 0.f)
 				{
 					if (isTop)
 					{
@@ -120,10 +140,6 @@ void AVoxelChunk::GenerateChunk(const FVector& ChunkLocation)
 					{
 						chunkElements[index] = EVoxelType::Dirt;
 					}
-				}
-				else
-				{
-					chunkElements[index] = EVoxelType::Empty;
 				}
 			}
 		}
@@ -450,6 +466,6 @@ void AVoxelChunk::BeginPlay()
 void AVoxelChunk::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
+
 

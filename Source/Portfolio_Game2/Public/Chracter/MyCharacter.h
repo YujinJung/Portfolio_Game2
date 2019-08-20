@@ -60,8 +60,6 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
 		int32 ChunkRangeInWorld;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
-		TArray<FVector2D> ChunkCoordArray;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
 		TArray<AVoxelChunk*> ChunkArray;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
 		TArray<FVector> UpdateChunkArray;
@@ -107,8 +105,12 @@ public:
 		void UpdateChunkMap();
 	UFUNCTION(BlueprintCallable, Category = Chunk)
 		void RemoveChunk();
+
 	UFUNCTION(BlueprintCallable, Category = Chunk)
 		bool CheckRadius(const FVector& ChunkCoord, const float Radius);
+
+	UFUNCTION(BlueprintCallable, Category = Chunk)
+	int32 FindChunkIndex(const FVector2D& findIndex);
 
 	// Place / Destroy Voxel 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
