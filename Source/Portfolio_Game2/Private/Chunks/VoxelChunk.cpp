@@ -383,11 +383,15 @@ void AVoxelChunk::SetVoxel(const FVector& VoxelLocation, EVoxelType& value)
 	int32 z = LocalVoxelLocation.Z / voxelSize;
 
 	int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
-	EVoxelType ret = chunkElements[index];
-	chunkElements[index] = value;
-	value = ret;
 
-	UpdateMesh();
+	if ((index >= 0) && (index < chunkElements.Num()))
+	{
+		EVoxelType ret = chunkElements[index];
+		chunkElements[index] = value;
+		value = ret;
+
+		UpdateMesh();
+	}
 }
 
 /*

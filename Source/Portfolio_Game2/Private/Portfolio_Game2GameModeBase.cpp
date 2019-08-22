@@ -13,6 +13,7 @@ APortfolio_Game2GameModeBase::APortfolio_Game2GameModeBase()
 		DefaultPawnClass = PlayerPawn.Class;
 	}
 
+
 	//static ConstructorHelpers::FClassFinder<APlayerController> PlayerController(TEXT("/Game/Blueprints/Character/BP_MyPlayerController"));
 	//if (PlayerController.Class != NULL)
 	//{

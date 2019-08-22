@@ -53,11 +53,11 @@ private:
 		float ChunkSize;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
 		float MaxChunkRadius;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
 		int32 VoxelRangeInChunk;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
 		int32 VoxelRangeInChunkX2;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
 		int32 ChunkRangeInWorld;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
 		TArray<AVoxelChunk*> ChunkArray;
