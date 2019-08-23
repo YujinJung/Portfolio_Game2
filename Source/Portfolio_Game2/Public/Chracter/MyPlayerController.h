@@ -1,0 +1,110 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/PlayerController.h"
+#include "MyPlayerController.generated.h"
+
+class AVoxelChunk;
+class ADestroyedVoxel;
+class UQuickSlot;
+
+UCLASS()
+class AMyPlayerController : public APlayerController
+{
+	GENERATED_BODY()
+
+private:
+	virtual void SetPawn(APawn* InPawn) override;
+
+	virtual void BeginPlay() override;
+
+	virtual void Tick( float DeltaTime ) override;
+
+
+private:
+	FTimerHandle MapLoadTimerHandle;
+	
+	// Voxel
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
+	float VoxelSize;
+
+	// Chunk
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+	float ChunkSize;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+	float MaxChunkRadius;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+	int32 VoxelRangeInChunk;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+	int32 VoxelRangeInChunkX2;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+	int32 ChunkRangeInWorld;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+	TArray<AVoxelChunk*> ChunkArray;
+
+
+	// Refresh Chunk
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+	int32 PlayerStandChunkIndex;
+
+
+	// Destroy Voxel
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
+		TArray<ADestroyedVoxel*> DestroyedVoxelArray;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
+		int32 DestroyVoxelChunkIndex;
+
+	// Quick Slot
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = QuickSlot, meta = (AllowPrivateAccess = true))
+		UQuickSlot* QuickSlotUI;
+
+
+	// Looting
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
+		float LootingRadius;
+
+public:
+	// Create / Update / Destory Chunk
+	UFUNCTION(BlueprintCallable, Category = Chunk)
+	void InitChunkMap();
+	UFUNCTION(BlueprintCallable, Category = Chunk)
+	void UpdateChunkMap();
+	UFUNCTION(BlueprintCallable, Category = Chunk)
+	void RemoveChunk();
+	UFUNCTION(BlueprintCallable, Category = Chunk)
+	int32 FindChunkIndex(const FVector2D& findIndex);
+
+	UFUNCTION()
+	void CheckPlayerStandChunk();
+
+
+	// Place / Destroy Voxel 
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	void PlaceVoxel();
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	void DestroyVoxel(float Value);
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	bool CheckVoxel(FHitResult& OutHit, int32& index);
+
+
+	// Reset Destory Voxel
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	void SetDestroyVoxelValueZero();
+
+	// Quick Slot / Inventory System
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	void LootingVoxel();
+	UFUNCTION(BlueprintPure, Category = QuickSlot)
+	UQuickSlot* GetQuickSlotUI() const { return QuickSlotUI; }
+
+	virtual void SetupInputComponent() override;
+
+public:
+	UFUNCTION(BlueprintCallable, Category = Chunk)
+		bool CheckRadius(const FVector& ChunkCoord, const float Radius);
+
+};

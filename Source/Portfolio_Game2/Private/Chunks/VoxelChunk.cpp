@@ -410,15 +410,10 @@ bool AVoxelChunk::DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, floa
 	// Change Destroy Voxel
 	if (index != CurrentDestroyVoxelIndex)
 	{
-		//if (CurrentDestroyVoxelIndex != -1)
-		//{
-		//	// Clear Stage
-		//	chunkElements[CurrentDestroyVoxelIndex] %= 100;
-		//}
-
 		DestroyStage = 0.f;
 		CurrentDestroyVoxelIndex = index;
 	}
+	LOG("D Value = %f, Stage = %f", Value, DestroyStage);
 
 	// Stage - 100 200 300 ...
 	// Voxel Type - 0 1 2 3 4 ..
