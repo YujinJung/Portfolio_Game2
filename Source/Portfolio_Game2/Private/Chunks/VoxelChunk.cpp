@@ -2,7 +2,6 @@
 
 #include "VoxelChunk.h"
 #include "SimplexNoiseBPLibrary.h"
-#include "ProceduralMeshComponent.h"
 #include "TimerManager.h"
 #include "Materials/Material.h"
 
@@ -29,17 +28,6 @@ const FVector bNormals5[] = { FVector(-1, 0, 0), FVector(-1, 0, 0), FVector(-1, 
 // top, bot, side ...
 const FVector bMask[] = { FVector(0.000000, 0.000000, 1.000000),FVector(0.000000, 0.000000, -1.000000),FVector(0.000000, 1.000000, 0.000000),FVector(0.000000, -1.000000, 0.000000), FVector(1.000000, 0.000000, 0.000000), FVector(-1.000000, 0.000000, 0.000000) };
 
-struct FVoxelChunkSection
-{
-	TArray<FVector> Vertices;
-	TArray<int32> Triangles;
-	TArray<FVector> Normals;
-	TArray<FVector2D> UV;
-	TArray<FColor> VertexColors;
-	TArray<FProcMeshTangent> Tangents;
-
-	int32 elementID = 0;
-};
 
 // Sets default values
 AVoxelChunk::AVoxelChunk()
@@ -55,7 +43,7 @@ AVoxelChunk::AVoxelChunk()
 
 	chunkXYSize = 16;
 	chunkXYSizeX2 = chunkXYSize * chunkXYSize;
-	chunkZSize = 16;
+	chunkZSize = 50;
 	chunkTotalSize = chunkXYSize * chunkXYSize * chunkZSize;
 
 	voxelSize = 100.f;
@@ -87,7 +75,6 @@ void AVoxelChunk::SetChunkIndex(const FVector2D& _chunkIndex)
 	ChunkIndex = _chunkIndex;
 	chunkXIndex = _chunkIndex.X;
 	chunkYIndex = _chunkIndex.Y;
-
 }
 
 
@@ -146,10 +133,10 @@ void AVoxelChunk::GenerateChunk(const FVector& ChunkLocation)
 	}
 
 
-	UpdateMesh();
+	CreateMesh();
 }
 
-void AVoxelChunk::UpdateMesh()
+void AVoxelChunk::CreateMesh()
 {
 	TArray<FVoxelChunkSection> ChunkSection;
 	ChunkSection.SetNum(VoxelMaterials.Num());
@@ -171,13 +158,14 @@ void AVoxelChunk::UpdateMesh()
 
 				if (VoxelMeshIndex >= 0)
 				{
-					int32& elementID = ChunkSection[VoxelMeshIndex].elementID;
-					TArray<FVector>& Vertices = ChunkSection[VoxelMeshIndex].Vertices;
-					TArray<int32>& Triangles = ChunkSection[VoxelMeshIndex].Triangles;
-					TArray<FVector>& Normals = ChunkSection[VoxelMeshIndex].Normals;
-					TArray<FVector2D>& UV = ChunkSection[VoxelMeshIndex].UV;
-					TArray<FColor>& VertexColors = ChunkSection[VoxelMeshIndex].VertexColors;
-					TArray<FProcMeshTangent>& Tangents = ChunkSection[VoxelMeshIndex].Tangents;
+					auto& elementID		= ChunkSection[VoxelMeshIndex].elementID;
+					auto& Vertices		= ChunkSection[VoxelMeshIndex].Vertices;
+					auto& Triangles		= ChunkSection[VoxelMeshIndex].Triangles;
+					auto& Normals		= ChunkSection[VoxelMeshIndex].Normals;
+					auto& UV			= ChunkSection[VoxelMeshIndex].UV;
+					auto& VertexColors	= ChunkSection[VoxelMeshIndex].VertexColors;
+					auto& Tangents		= ChunkSection[VoxelMeshIndex].Tangents;
+					auto& VertexIndex	= ChunkSection[VoxelMeshIndex].VertexIndex;
 
 					int triangleVerticeNum = 0;
 					for (int i = 0; i < 6; ++i)
@@ -218,7 +206,6 @@ void AVoxelChunk::UpdateMesh()
 								Triangles.Add(bTriangles[j] + triangleVerticeNum + elementID);
 							}
 							triangleVerticeNum += 4;
-
 
 							switch (i)
 							{
@@ -310,6 +297,7 @@ void AVoxelChunk::UpdateMesh()
 						}
 
 					}
+					VertexIndex.Add(index, FVoxelIndexInSection(elementID, triangleVerticeNum));
 					elementID += triangleVerticeNum;
 				}
 			}
@@ -327,6 +315,8 @@ void AVoxelChunk::UpdateMesh()
 			VoxelMeshComponent->CreateMeshSection(SectionIndex, c.Vertices, c.Triangles, c.Normals, c.UV, c.VertexColors, c.Tangents, true);
 		}
 	}
+
+	ChunkSectionInfo = ChunkSection;
 
 	for (int MaterialIndex = 0; MaterialIndex < VoxelMaterials.Num(); ++MaterialIndex)
 	{
@@ -374,7 +364,7 @@ void AVoxelChunk::RefreshMesh()
  * @param VoxelLocation - Voxel Location
  * @param value			- Set Voxel Type / Return Voxel original type
  */
-void AVoxelChunk::SetVoxel(const FVector& VoxelLocation, EVoxelType& value)
+bool AVoxelChunk::SetVoxel(const FVector& VoxelLocation, EVoxelType& value)
 {
 	// Round off
 	FVector LocalVoxelLocation = VoxelLocation + voxelHalfSize * FVector::OneVector;
@@ -384,14 +374,21 @@ void AVoxelChunk::SetVoxel(const FVector& VoxelLocation, EVoxelType& value)
 
 	int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
 
+	// Range Check
 	if ((index >= 0) && (index < chunkElements.Num()))
 	{
 		EVoxelType ret = chunkElements[index];
+		if (ret != EVoxelType::Empty) { return false; }
+
 		chunkElements[index] = value;
 		value = ret;
 
-		UpdateMesh();
+		CreateMesh();
+
+		return true;
 	}
+
+	return false;
 }
 
 /*
@@ -404,16 +401,14 @@ bool AVoxelChunk::DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, floa
 	int32 x = LocalVoxelLocation.X / voxelSize;
 	int32 y = LocalVoxelLocation.Y / voxelSize;
 	int32 z = LocalVoxelLocation.Z / voxelSize;
-
-	int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
+	int32 DestroyVoxelIndex = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
 
 	// Change Destroy Voxel
-	if (index != CurrentDestroyVoxelIndex)
+	if (DestroyVoxelIndex != CurrentDestroyVoxelIndex)
 	{
 		DestroyStage = 0.f;
-		CurrentDestroyVoxelIndex = index;
+		CurrentDestroyVoxelIndex = DestroyVoxelIndex;
 	}
-	LOG("D Value = %f, Stage = %f", Value, DestroyStage);
 
 	// Stage - 100 200 300 ...
 	// Voxel Type - 0 1 2 3 4 ..
@@ -424,17 +419,40 @@ bool AVoxelChunk::DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, floa
 	{
 		InitDestroyVoxel();
 
-		EVoxelType ret = EVoxelType::Empty;
-		SetVoxel(VoxelLocation, ret);
+		e = chunkElements[DestroyVoxelIndex];
+		chunkElements[DestroyVoxelIndex] = EVoxelType::Empty;
+		//SetVoxel(VoxelLocation, ret);
+		CreateMesh();
 
-		if (ret != EVoxelType::Empty)
-		{
-			e = ret;
-			return true;
-		}
+		return true;
 	}
+	else
+	{
+		// Section Index
+		int32 SectionIndex = static_cast<int32>(chunkElements[DestroyVoxelIndex]) - 1;
+		if (SectionIndex < 0) { return false; } // Voxel is Empty
+		FVoxelChunkSection& ChunkSection = ChunkSectionInfo[SectionIndex];
 
-	UpdateMesh();
+		if (!ChunkSection.VertexIndex.Contains(DestroyVoxelIndex)) { return false; }
+		int32 VertexIndex = ChunkSection.VertexIndex[DestroyVoxelIndex].StartIndex;
+		int32 VoxelDrawSide = ChunkSection.VertexIndex[DestroyVoxelIndex].DrawSide;
+
+		// For Update Mesh Section
+		auto& VertexColors = ChunkSectionInfo[SectionIndex].VertexColors;
+		for (int ChangeVoxelIndex = VertexIndex; ChangeVoxelIndex < VertexIndex + VoxelDrawSide; ++ChangeVoxelIndex)
+		{
+			if (ChangeVoxelIndex < VertexColors.Num())
+			{
+				VertexColors[ChangeVoxelIndex].R = DestroyStage / 10.f;
+			}
+		}
+		VoxelMeshComponent->UpdateMeshSection(SectionIndex,
+			ChunkSectionInfo[SectionIndex].Vertices,
+			ChunkSectionInfo[SectionIndex].Normals,
+			ChunkSectionInfo[SectionIndex].UV,
+			VertexColors,
+			ChunkSectionInfo[SectionIndex].Tangents);
+	}
 
 	DestroyStage += Value * DestroySpeed;
 	return false;
@@ -446,7 +464,7 @@ void AVoxelChunk::InitDestroyVoxel()
 	CurrentDestroyVoxelType = EVoxelType::Empty;
 	DestroyStage = 0.f;
 
-	UpdateMesh();
+	CreateMesh();
 }
 
 void AVoxelChunk::SetIsRunningTime(bool r)

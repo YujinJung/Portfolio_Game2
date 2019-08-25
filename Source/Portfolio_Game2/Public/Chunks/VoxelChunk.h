@@ -5,7 +5,42 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Portfolio_Game2_Common.h"
+#include "ProceduralMeshComponent.h"
 #include "VoxelChunk.generated.h"
+
+USTRUCT(BlueprintType)
+struct FVoxelIndexInSection
+{
+	GENERATED_USTRUCT_BODY();
+public:
+	FVoxelIndexInSection() {}
+	FVoxelIndexInSection(int32 _voxelIndex, int32 _drawSide)
+		: StartIndex(_voxelIndex), DrawSide(_drawSide)
+	{ }
+
+	/* Voxel index in section */
+	int32 StartIndex = 0;
+	/* The number of sides to draw in the voxel */
+	int32 DrawSide = 0;
+};
+
+USTRUCT(BlueprintType)
+struct FVoxelChunkSection
+{
+	GENERATED_USTRUCT_BODY();
+public:
+	TArray<FVector> Vertices;
+	TArray<int32> Triangles;
+	TArray<FVector> Normals;
+	TArray<FVector2D> UV;
+	TArray<FColor> VertexColors;
+	TArray<FProcMeshTangent> Tangents;
+
+	TMap<int32, FVoxelIndexInSection> VertexIndex;
+
+	int32 elementID = 0;
+};
+
 
 UCLASS()
 class PORTFOLIO_GAME2_API AVoxelChunk : public AActor
@@ -32,13 +67,13 @@ public:
 	void GenerateChunk(const FVector& PlayerLocation);
 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	void UpdateMesh();
+	void CreateMesh();
 
 	UFUNCTION()
 	void RefreshMesh();
 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	void SetVoxel(const FVector& VoxelPos, EVoxelType& value);
+	bool SetVoxel(const FVector& VoxelPos, EVoxelType& value);
 	
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	bool DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, float Value);
@@ -54,20 +89,22 @@ private:
 	UPROPERTY()
 	class UProceduralMeshComponent* VoxelMeshComponent;
 
+	/* Current ChunkSection INFO for Update */
+	UPROPERTY()
+	TArray<FVoxelChunkSection> ChunkSectionInfo;
+
 	UPROPERTY()
 	FVector2D ChunkIndex;
 
 	FTimerHandle MapLoadTimerHandle;
 
 public:
-	FORCEINLINE FVector2D GetChunkIndex() const { return ChunkIndex; }
+	UFUNCTION()
+	FVector2D GetChunkIndex() const { return ChunkIndex; }
 
 	void SetChunkIndex(const FVector2D& _chunkIndex);
 
 private:
-	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta=(AllowPrivateAccess = true))
-	class UMaterial* VoxelMaterials;
-*/
 	UPROPERTY(EditAnywhere)
 	int32 chunkZSize;
 	UPROPERTY(EditAnywhere)
@@ -107,3 +144,4 @@ private:
 	UPROPERTY()
 	float MaxDestroyValue;
 };
+

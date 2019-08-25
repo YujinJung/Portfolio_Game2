@@ -35,15 +35,13 @@ void AMyPlayerController::BeginPlay()
 	VoxelRangeInChunkX2 = VoxelRangeInChunk * 2;
 	ChunkSize = VoxelRangeInChunk * VoxelSize;
 
-	ChunkRangeInWorld = 8;
+	ChunkRangeInWorld = 16;
 	MaxChunkRadius = ChunkSize * ChunkRangeInWorld;
 
 	DestroyVoxelChunkIndex = -1;
 	PlayerStandChunkIndex = 0;
 
 	LootingRadius = 200.f;
-
-
 
 	// Create QuickSlot Object
 	QuickSlotUI = NewObject<UQuickSlot>();
@@ -82,7 +80,6 @@ void AMyPlayerController::UpdateChunkMap()
 	const int x = floor(PlayerLocation.X);
 	const int y = floor(PlayerLocation.Y);
 
-
 	static int x_i = 0; // 0 1 2 3 ... ChunkRange 0 1 2 ... 
 	static int y_i = 1; // 1 -1 1 -1
 	static int g_i = 1; // odd even check
@@ -116,7 +113,6 @@ void AMyPlayerController::UpdateChunkMap()
 	}
 
 	RemoveChunk();
-
 
 	// next chunk
 	{
@@ -259,22 +255,21 @@ void AMyPlayerController::PlaceVoxel()
 	{
 		FVector VoxelLocalLocation = Hit.Location - ChunkArray[index]->GetActorLocation() + Hit.Normal;
 		EVoxelType PlaceVoxelType = QuickSlotUI->GetCurrentVoxelItem().VoxelType;
-		QuickSlotUI->CurrentVoxelMinusOne();
-		ChunkArray[index]->SetVoxel(VoxelLocalLocation, PlaceVoxelType);
-
+		if (ChunkArray[index]->SetVoxel(VoxelLocalLocation, PlaceVoxelType))
+		{
+			QuickSlotUI->CurrentVoxelMinusOne();
+		}
 	}
 }
 
 void AMyPlayerController::DestroyVoxel(float Value)
-{
-	static int i = 0;
+{	
 	if (Value != 0.f)
 	{
 		FHitResult Hit;
 		int32 index;
 		if (CheckVoxel(Hit, index))
 		{
-			LOG("Place %s", *Hit.GetActor()->GetName());
 			if (index != DestroyVoxelChunkIndex)
 			{
 				SetDestroyVoxelValueZero();

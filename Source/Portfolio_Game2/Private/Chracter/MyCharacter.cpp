@@ -14,7 +14,7 @@
 
 AMyCharacter::AMyCharacter()
 {
-	GetCapsuleComponent()->InitCapsuleSize(42.f, 150.f);
+	GetCapsuleComponent()->InitCapsuleSize(35.f, 80.f);
 
 	BaseTurnAtRate = 45.f;
 	BaseLookUpAtRate = 45.f;
