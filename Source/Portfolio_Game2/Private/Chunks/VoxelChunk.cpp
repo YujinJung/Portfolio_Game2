@@ -52,18 +52,24 @@ AVoxelChunk::AVoxelChunk()
 	DestroyStage = 0.f;
 	CurrentDestroyVoxelIndex = -1;
 
+	TreeRandomSeed = 10;
+
 	MaxDestroyValue = 80.f;
 	DestroySpeed = 1.f;
 	isRunningTime = false;
 
-	AddVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Dirt"));
-	AddVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Grass"));
-	AddVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Sand"));
-	AddVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Stone"));
+	AddVoxelMaterial(TEXT("M_Dirt"));
+	AddVoxelMaterial(TEXT("M_Grass"));
+	AddVoxelMaterial(TEXT("M_Sand"));
+	AddVoxelMaterial(TEXT("M_Stone"));
+	AddVoxelMaterial(TEXT("M_Log"));
+	AddVoxelMaterial(TEXT("M_Leaves"));
 }
 
-void AVoxelChunk::AddVoxelMaterial(FString MaterialPath)
+void AVoxelChunk::AddVoxelMaterial(FString MaterialName)
 {
+	FString MaterialPath = TEXT("/Game/MinecraftContents/Materials/Voxels/");
+	MaterialPath.Append(MaterialName);
 	UMaterial* VoxelMaterial = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
 
 	if (VoxelMaterial)
@@ -109,8 +115,8 @@ float AVoxelChunk::CalcDensity(float x, float y, float z)
 void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 {
 	chunkElements.SetNumUninitialized(chunkTotalSize);
-	TArray<FVector> TreeIndex;
-	//FRandomStream RandomStream = FRandomStream(TreeRandomSeed);
+	TArray<FIntVector> TreeIndex;
+	FRandomStream RandomStream = FRandomStream(TreeRandomSeed);
 
 	for (int32 x = 0; x < chunkXYSize; ++x)
 	{
@@ -138,6 +144,10 @@ void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 				{
 					if (isTop)
 					{
+						if (RandomStream.FRand() < 0.02)
+						{
+							TreeIndex.Add(FIntVector(x, y, z + 1));
+						}
 						chunkElements[index] = EVoxelType::Grass;
 						isTop = false;
 					}
@@ -151,6 +161,42 @@ void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 		}
 	}
 
+	for (auto& e : TreeIndex)
+	{
+		for (int x = -2; x < 3; ++x)
+		{
+			for (int y = -2; y < 3; ++y)
+			{
+				for (int z = 0; z < 6; ++z)
+				{
+					const int tIndex_x = x + e.X;
+					const int tIndex_y = y + e.Y;
+					const int tIndex_z = z + e.Z;
+
+					if((tIndex_x < 0) || (tIndex_x >= chunkXYSize) 
+						|| (tIndex_y < 0) || (tIndex_y >= chunkXYSize)
+						|| (tIndex_z < 0) || (tIndex_z >= chunkZSize))
+					{
+						continue;
+					}
+					int32 index = tIndex_x + (tIndex_y * chunkXYSize) + (tIndex_z * chunkXYSizeX2);
+
+					/* Center */
+					if ((x == 0) && (y == 0) && (z < 5))
+					{
+						chunkElements[index] = EVoxelType::Log;
+					}
+					else if(z > 1)
+					{
+						if ((RandomStream.FRand() < 0.08f) || ((abs(x) < 2) && (abs(y) < 2)))
+						{
+							chunkElements[index] = EVoxelType::Leaves;
+						}
+					}
+				}
+			}
+		}
+	}
 
 	GenerateChunk();
 }

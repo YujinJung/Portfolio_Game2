@@ -60,7 +60,7 @@ public:
 
 	/* Add Voxel Material */
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	void AddVoxelMaterial(FString MaterialPath);
+	void AddVoxelMaterial(FString MaterialName);
 
 	/* Use FindChunk By Index*/
 	UFUNCTION()

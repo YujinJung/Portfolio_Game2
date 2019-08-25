@@ -17,8 +17,10 @@ enum class EVoxelType : uint8
 	Grass,
 	Sand,
 	Stone,
+	Log,
+	Leaves,
 	Count,
-	Dirt_Grass
+	Dirt_Grass,
 };
 
 /*
