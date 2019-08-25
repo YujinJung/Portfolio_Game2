@@ -41,13 +41,14 @@ AVoxelChunk::AVoxelChunk()
 	RootComponent = VoxelMeshComponent;
 	VoxelMeshComponent->bUseAsyncCooking = true;
 
+	voxelSize = 100;
+	voxelHalfSize = voxelSize / 2;
+
 	chunkXYSize = 16;
-	chunkXYSizeX2 = chunkXYSize * chunkXYSize;
 	chunkZSize = 50;
+	chunkXYSizeX2 = chunkXYSize * chunkXYSize;
 	chunkTotalSize = chunkXYSize * chunkXYSize * chunkZSize;
 
-	voxelSize = 100.f;
-	voxelHalfSize = voxelSize / 2;
 	DestroyStage = 0.f;
 	CurrentDestroyVoxelIndex = -1;
 
@@ -55,12 +56,13 @@ AVoxelChunk::AVoxelChunk()
 	DestroySpeed = 1.f;
 	isRunningTime = false;
 
-	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Dirt"));
-	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Grass"));
-	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Sand"));
-	SetVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Stone"));
+	AddVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Dirt"));
+	AddVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Grass"));
+	AddVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Sand"));
+	AddVoxelMaterial(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Stone"));
 }
-void AVoxelChunk::SetVoxelMaterial(FString MaterialPath)
+
+void AVoxelChunk::AddVoxelMaterial(FString MaterialPath)
 {
 	UMaterial* VoxelMaterial = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
 
@@ -70,14 +72,25 @@ void AVoxelChunk::SetVoxelMaterial(FString MaterialPath)
 	}
 }
 
+// Called when the game starts or when spawned
+void AVoxelChunk::BeginPlay()
+{
+	Super::BeginPlay();
+	GetWorldTimerManager().SetTimer(MapLoadTimerHandle, this, &AVoxelChunk::RefreshMesh, 3.f, true);
+}
+
+// Called every frame
+void AVoxelChunk::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+}
+
 void AVoxelChunk::SetChunkIndex(const FVector2D& _chunkIndex)
 {
 	ChunkIndex = _chunkIndex;
 	chunkXIndex = _chunkIndex.X;
 	chunkYIndex = _chunkIndex.Y;
 }
-
-
 
 float AVoxelChunk::CalcDensity(float x, float y, float z)
 {
@@ -93,15 +106,18 @@ float AVoxelChunk::CalcDensity(float x, float y, float z)
 	return density;
 }
 
-void AVoxelChunk::GenerateChunk(const FVector& ChunkLocation)
+void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 {
 	chunkElements.SetNumUninitialized(chunkTotalSize);
+	TArray<FVector> TreeIndex;
+	//FRandomStream RandomStream = FRandomStream(TreeRandomSeed);
 
 	for (int32 x = 0; x < chunkXYSize; ++x)
 	{
 		for (int32 y = 0; y < chunkXYSize; ++y)
 		{
 			bool isTop = true; // check top 
+			int airCount = 0;
 			for (int32 z = chunkZSize - 1; z >= 0; --z)
 			{
 				int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
@@ -111,11 +127,13 @@ void AVoxelChunk::GenerateChunk(const FVector& ChunkLocation)
 				if (density < 0.f)
 				{
 					chunkElements[index] = EVoxelType::Empty;
+					airCount++;
+					if (airCount == 3) { isTop = true; }
 				}
-				else if ((density + ((1 - (z / chunkZSize)) * 4.5f)) >= 5.f)
+				/*else if ((density + ((1 - (z / chunkZSize)) * 4.5f)) >= 5.f)
 				{
 					chunkElements[index] = EVoxelType::Stone;
-				}
+				}*/
 				else if (density >= 0.f)
 				{
 					if (isTop)
@@ -127,16 +145,17 @@ void AVoxelChunk::GenerateChunk(const FVector& ChunkLocation)
 					{
 						chunkElements[index] = EVoxelType::Dirt;
 					}
+					airCount = 0;
 				}
 			}
 		}
 	}
 
 
-	CreateMesh();
+	GenerateChunk();
 }
 
-void AVoxelChunk::CreateMesh()
+void AVoxelChunk::GenerateChunk()
 {
 	TArray<FVoxelChunkSection> ChunkSection;
 	ChunkSection.SetNum(VoxelMaterials.Num());
@@ -383,7 +402,7 @@ bool AVoxelChunk::SetVoxel(const FVector& VoxelLocation, EVoxelType& value)
 		chunkElements[index] = value;
 		value = ret;
 
-		CreateMesh();
+		GenerateChunk();
 
 		return true;
 	}
@@ -421,8 +440,7 @@ bool AVoxelChunk::DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, floa
 
 		e = chunkElements[DestroyVoxelIndex];
 		chunkElements[DestroyVoxelIndex] = EVoxelType::Empty;
-		//SetVoxel(VoxelLocation, ret);
-		CreateMesh();
+		GenerateChunk();
 
 		return true;
 	}
@@ -464,25 +482,11 @@ void AVoxelChunk::InitDestroyVoxel()
 	CurrentDestroyVoxelType = EVoxelType::Empty;
 	DestroyStage = 0.f;
 
-	CreateMesh();
+	GenerateChunk();
 }
 
 void AVoxelChunk::SetIsRunningTime(bool r)
 {
 	isRunningTime = r;
 }
-
-// Called when the game starts or when spawned
-void AVoxelChunk::BeginPlay()
-{
-	Super::BeginPlay();
-	GetWorldTimerManager().SetTimer(MapLoadTimerHandle, this, &AVoxelChunk::RefreshMesh, 3.f, true);
-}
-
-// Called every frame
-void AVoxelChunk::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
-
 

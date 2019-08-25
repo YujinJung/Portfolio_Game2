@@ -58,81 +58,102 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	/* Add Voxel Material */
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	void AddVoxelMaterial(FString MaterialPath);
+
+	/* Use FindChunk By Index*/
+	UFUNCTION()
+	FORCEINLINE FVector2D GetChunkIndex() const { return ChunkIndex; }
+	UFUNCTION()
+	void SetChunkIndex(const FVector2D& _chunkIndex);
+
+private:
+	/* Use FindChunk By Index*/
+	UPROPERTY()
+	FVector2D ChunkIndex;
+
+	UPROPERTY()
+	TArray<class UMaterial*> VoxelMaterials;
+
+
+/* Generate Chunk*/
+public:
+	/* Calculate Density By NoiseFunction*/
+	UFUNCTION(BlueprintCallable, Category = Voxel)
 	float CalcDensity(float x, float y, float z);
 
+	/* Decide voxel type */
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	void SetVoxelMaterial(FString MaterialPath);
+	void GenerateVoxelType(const FVector& PlayerLocation);
 
+	/* Generate Mesh */
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	void GenerateChunk(const FVector& PlayerLocation);
-
-	UFUNCTION(BlueprintCallable, Category = Voxel)
-	void CreateMesh();
+	void GenerateChunk();
 
 	UFUNCTION()
 	void RefreshMesh();
 
+
+private:
+	UPROPERTY()
+	class UProceduralMeshComponent* VoxelMeshComponent;
+
+	UPROPERTY()
+	TArray<EVoxelType> chunkElements;
+
+	/* Spawn Tree Random Seed */
+	UPROPERTY()
+	int32 TreeRandomSeed;
+
+	FTimerHandle MapLoadTimerHandle;
+	
+	/* const */
+	UPROPERTY()
+	int32 voxelSize;
+
+	UPROPERTY()
+	int32 voxelHalfSize;
+
+	UPROPERTY(EditAnywhere)
+	int32 chunkZSize;
+
+	UPROPERTY(EditAnywhere)
+	int32 chunkXYSize;
+
+	UPROPERTY()
+	int32 chunkXYSizeX2;
+	
+	UPROPERTY()
+	int32 chunkTotalSize;
+
+	UPROPERTY()
+	int32 chunkXIndex;
+
+	UPROPERTY()
+	int32 chunkYIndex;
+
+	
+/* Place and Destroy Voxel */
+public:
+	/* Set Voxel Type and return origin voxel type. Use Place Voxel*/
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	bool SetVoxel(const FVector& VoxelPos, EVoxelType& value);
-	
+
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	bool DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, float Value);
 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	void InitDestroyVoxel();
 
-	FORCEINLINE const int32 GetChunkXYSize() const { return chunkXYSize; }
-
 	void SetIsRunningTime(bool r);
 
 private:
-	UPROPERTY()
-	class UProceduralMeshComponent* VoxelMeshComponent;
-
 	/* Current ChunkSection INFO for Update */
 	UPROPERTY()
 	TArray<FVoxelChunkSection> ChunkSectionInfo;
 
-	UPROPERTY()
-	FVector2D ChunkIndex;
-
-	FTimerHandle MapLoadTimerHandle;
-
-public:
-	UFUNCTION()
-	FVector2D GetChunkIndex() const { return ChunkIndex; }
-
-	void SetChunkIndex(const FVector2D& _chunkIndex);
-
-private:
-	UPROPERTY(EditAnywhere)
-	int32 chunkZSize;
-	UPROPERTY(EditAnywhere)
-	int32 chunkXYSize;
-	UPROPERTY()
-	int32 chunkXYSizeX2;
-	UPROPERTY()
-	int32 chunkTotalSize;
-	UPROPERTY()
-	int32 chunkXIndex;
-	UPROPERTY()
-	int32 chunkYIndex;
-	UPROPERTY()
-	int32 voxelSize;
-	UPROPERTY()
-	int32 voxelHalfSize;
-	
-	UPROPERTY()
-	TArray<EVoxelType> chunkElements;
-	UPROPERTY()
-	TMap<int32, float> chunkElementsTime; // index, time
-	UPROPERTY()
-	bool isRunningTime;
-
-	UPROPERTY()
-	TArray<class UMaterial*> VoxelMaterials;
-
-	// Destroy
+	/* Destroy */
 	UPROPERTY()
 	int32 CurrentDestroyVoxelIndex; // -1 : no Destroy Voxel
 	UPROPERTY()
@@ -143,5 +164,12 @@ private:
 	float DestroySpeed; // speed
 	UPROPERTY()
 	float MaxDestroyValue;
+
+
+private:
+	UPROPERTY()
+	TMap<int32, float> chunkElementsTime; // index, time
+	UPROPERTY()
+	bool isRunningTime;
 };
 

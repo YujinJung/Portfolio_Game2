@@ -106,7 +106,7 @@ void AMyPlayerController::UpdateChunkMap()
 			{
 				AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(CurrentIndex * ChunkSize, 0.f), FRotator::ZeroRotator);
 				SpawnChunk->SetChunkIndex(CurrentIndex);
-				SpawnChunk->GenerateChunk(FVector(CurrentIndex, 0.f));
+				SpawnChunk->GenerateVoxelType(FVector(CurrentIndex, 0.f));
 				ChunkArray.Add(MoveTemp(SpawnChunk));
 			}
 		}
@@ -253,8 +253,14 @@ void AMyPlayerController::PlaceVoxel()
 
 	if (CheckVoxel(Hit, index))
 	{
+		FVector PlaceLocation = Hit.Location + Hit.Normal;
+		PlaceLocation /= ChunkSize;
+		FVector2D PlaceLocationChunkIndex(floor(PlaceLocation.X), floor(PlaceLocation.Y));
+		index = FindChunkIndex(PlaceLocationChunkIndex);
+
 		FVector VoxelLocalLocation = Hit.Location - ChunkArray[index]->GetActorLocation() + Hit.Normal;
 		EVoxelType PlaceVoxelType = QuickSlotUI->GetCurrentVoxelItem().VoxelType;
+
 		if (ChunkArray[index]->SetVoxel(VoxelLocalLocation, PlaceVoxelType))
 		{
 			QuickSlotUI->CurrentVoxelMinusOne();
