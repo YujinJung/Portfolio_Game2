@@ -21,42 +21,42 @@ public:
 private:
 	// Inventory
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = QuickSlot, meta = (AllowPrivateAccess = true))
-		TArray<FVoxelItemInfo> InventoryVoxelItemArray;
+	TArray<FVoxelItemInfo> InventoryVoxelItemArray;
 	// Quick Slot
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = QuickSlot, meta = (AllowPrivateAccess = true))
-		TArray<FVoxelItemInfo> QuickSlotVoxelItemArray;
+	TArray<FVoxelItemInfo> QuickSlotVoxelItemArray;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = QuickSlot, meta = (AllowPrivateAccess = true))
-		uint8 MaxVoxelItemNum;
+	uint8 MaxVoxelItemNum;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = QuickSlot, meta = (AllowPrivateAccess = true))
-		int32 CurrentVoxelItemIndex;
+	int32 CurrentVoxelItemIndex;
 
 public:
 	// Quick Slot / Inventory System
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-		bool LootingVoxel(const FVoxelItemInfo& LootingVoxelItem);
+	bool LootingVoxel(const FVoxelItemInfo& LootingVoxelItem);
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-		bool isValidCurrentVoxelItem() const;
+	bool isValidCurrentVoxelItem() const;
 
 	UFUNCTION(BlueprintCallable, Category = QuickSlot)
-		void SetCurrentVoxelItem(const FVoxelItemInfo& VoxelInfo);
+	void SetCurrentVoxelItem(const FVoxelItemInfo& VoxelInfo);
 	UFUNCTION(BlueprintCallable, Category = QuickSlot)
-		void SetCurrentVoxelItemByIndex(int32 index);
+	void SetCurrentVoxelItemByIndex(int32 index);
 	UFUNCTION(BlueprintCallable, Category = QuickSlot)
-		void SetQuickSlotVoxelItemArray(EVoxelType inVoxelType, int32 num, int32 index);
+	void SetQuickSlotVoxelItemArray(EVoxelType inVoxelType, int32 num, int32 index);
 	UFUNCTION(BlueprintCallable, Category = QuickSlot)
-		void SetItemArray(EInventoryType InvenType, int32 index, FVoxelItemInfo ItemInfo);
+	void SetItemArray(EInventoryType InvenType, int32 index, FVoxelItemInfo ItemInfo);
 	UFUNCTION(BlueprintCallable, Category = QuickSlot)
-		void CurrentVoxelMinusOne();
+	void CurrentVoxelMinusOne();
 
 	UFUNCTION(BlueprintPure, Category = QuickSlot)
-		uint8 GetQuickSlotEmptyIndex(const FVoxelItemInfo& LootingVoxel);
+	uint8 GetQuickSlotEmptyIndex(const FVoxelItemInfo& LootingVoxel);
 	UFUNCTION(BlueprintPure, Category = QuickSlot)
-		FORCEINLINE TArray<FVoxelItemInfo> GetQuickSlotVoxelItemArray() const { return QuickSlotVoxelItemArray; }
+	FORCEINLINE TArray<FVoxelItemInfo> GetQuickSlotVoxelItemArray() const { return QuickSlotVoxelItemArray; }
 	UFUNCTION(BlueprintPure, Category = QuickSlot)
-		FORCEINLINE FVoxelItemInfo GetCurrentVoxelItem() const { return QuickSlotVoxelItemArray[CurrentVoxelItemIndex]; }
+	FORCEINLINE FVoxelItemInfo GetCurrentVoxelItem() const { return QuickSlotVoxelItemArray[CurrentVoxelItemIndex]; }
 
 	UFUNCTION(BlueprintPure, Category = QuickSlot)
-		TArray<FVoxelItemInfo> GetItemArray(EInventoryType InvenType);
+	TArray<FVoxelItemInfo> GetItemArray(EInventoryType InvenType);
 	UFUNCTION(BlueprintPure, Category = QuickSlot)
-		FVoxelItemInfo GetItemArrayByIndex(EInventoryType InvenType, int32 index);
+	FVoxelItemInfo GetItemArrayByIndex(EInventoryType InvenType, int32 index);
 };

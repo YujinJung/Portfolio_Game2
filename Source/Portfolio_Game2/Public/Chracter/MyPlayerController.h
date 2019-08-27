@@ -31,7 +31,6 @@ private:
 	float VoxelSize;
 
 	// Chunk
-	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
 	float ChunkSize;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
@@ -54,18 +53,19 @@ private:
 
 	// Destroy Voxel
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
-		TArray<ADestroyedVoxel*> DestroyedVoxelArray;
+	TArray<ADestroyedVoxel*> DestroyedVoxelArray;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
-		int32 DestroyVoxelChunkIndex;
+	int32 DestroyVoxelChunkIndex;
 
 	// Quick Slot
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = QuickSlot, meta = (AllowPrivateAccess = true))
-		UQuickSlot* QuickSlotUI;
-
+	UQuickSlot* QuickSlotUI;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = QuickSlot, meta = (AllowPrivateAccess = true))
+	bool bIsOpenInventory;
 
 	// Looting
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
-		float LootingRadius;
+	float LootingRadius;
 
 public:
 	// Create / Update / Destory Chunk
@@ -98,13 +98,20 @@ public:
 	// Quick Slot / Inventory System
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	void LootingVoxel();
+
 	UFUNCTION(BlueprintPure, Category = QuickSlot)
-	UQuickSlot* GetQuickSlotUI() const { return QuickSlotUI; }
+	FORCEINLINE UQuickSlot* GetQuickSlotUI() const { return QuickSlotUI; }
+
+	UFUNCTION(BlueprintPure, Category = Inventory)
+	FORCEINLINE bool IsOpenInventory() const { return bIsOpenInventory; }
+	UFUNCTION(BlueprintCallable, Category = Inventory)
+	void SetIsOpenInventory(bool _bIsOpenInventory);
+
 
 	virtual void SetupInputComponent() override;
 
 public:
 	UFUNCTION(BlueprintCallable, Category = Chunk)
-		bool CheckRadius(const FVector& ChunkCoord, const float Radius);
+	bool CheckRadius(const FVector& ChunkCoord, const float Radius);
 
 };

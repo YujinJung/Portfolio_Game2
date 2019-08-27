@@ -243,7 +243,7 @@ int32 AMyPlayerController::FindChunkIndex(const FVector2D& findIndex)
 
 void AMyPlayerController::PlaceVoxel()
 {
-	if (!QuickSlotUI->isValidCurrentVoxelItem())
+	if (!QuickSlotUI->isValidCurrentVoxelItem() || bIsOpenInventory)
 	{
 		return;
 	}
@@ -270,6 +270,11 @@ void AMyPlayerController::PlaceVoxel()
 
 void AMyPlayerController::DestroyVoxel(float Value)
 {	
+	if (bIsOpenInventory)
+	{
+		return; 
+	}
+
 	if (Value != 0.f)
 	{
 		FHitResult Hit;
@@ -377,6 +382,11 @@ void AMyPlayerController::LootingVoxel()
 			DestroyedVoxelArray.RemoveAtSwap(index);
 		}
 	}
+}
+
+void AMyPlayerController::SetIsOpenInventory(bool _bIsOpenInventory)
+{
+	bIsOpenInventory = _bIsOpenInventory;
 }
 
 void AMyPlayerController::SetupInputComponent()

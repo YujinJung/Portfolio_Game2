@@ -161,6 +161,7 @@ void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 		}
 	}
 
+
 	for (auto& e : TreeIndex)
 	{
 		for (int x = -2; x < 3; ++x)
