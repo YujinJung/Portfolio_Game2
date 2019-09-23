@@ -144,7 +144,7 @@ void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 				{
 					if (isTop)
 					{
-						if (RandomStream.FRand() < 0.02)
+						if (RandomStream.FRand() < 0.01)
 						{
 							TreeIndex.Add(FIntVector(x, y, z + 1));
 						}

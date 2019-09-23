@@ -179,7 +179,7 @@ void AMyPlayerController::CheckPlayerStandChunk()
 	// Plyaer Move && End Update
 	if ((PlayerStandChunkIndex != PlayerChunkIndex) && (GetWorldTimerManager().GetTimerElapsed(MapLoadTimerHandle) == -1))
 	{
-		GetWorldTimerManager().SetTimer(MapLoadTimerHandle, this, &AMyPlayerController::UpdateChunkMap, 0.1f, true, updateIndex * 0.1f);
+		GetWorldTimerManager().SetTimer(MapLoadTimerHandle, this, &AMyPlayerController::UpdateChunkMap, 0.2f, true, updateIndex * 0.1f);
 
 		if (PlayerStandChunkIndex < ChunkArray.Num())
 		{
@@ -320,10 +320,10 @@ bool AMyPlayerController::CheckVoxel(FHitResult& OutHit, int32& index)
 	TraceParams.AddIgnoredActor(GetPawn());
 
 	// Draw LineTrace
-	const FName TraceTag("MyTraceTag");
-	auto world = GetWorld();
-	world->DebugDrawTraceTag = TraceTag;
-	TraceParams.TraceTag = TraceTag;
+	//const FName TraceTag("MyTraceTag");
+	//auto world = GetWorld();
+	//world->DebugDrawTraceTag = TraceTag;
+	//TraceParams.TraceTag = TraceTag;
 
 	GetWorld()->LineTraceSingleByChannel(OutHit, StartTrace, EndTrace, ECollisionChannel::ECC_WorldStatic, TraceParams);
 
