@@ -44,7 +44,7 @@ AVoxelChunk::AVoxelChunk()
 	voxelSize = 100;
 	voxelHalfSize = voxelSize / 2;
 
-	chunkXYSize = 16;
+	chunkXYSize = 18;
 	chunkZSize = 50;
 	chunkXYSizeX2 = chunkXYSize * chunkXYSize;
 	chunkTotalSize = chunkXYSize * chunkXYSize * chunkZSize;
@@ -112,6 +112,10 @@ float AVoxelChunk::CalcDensity(float x, float y, float z)
 	return density;
 }
 
+/*
+ * Generate Voxel Type
+ * @param ChunkLocation : chunk location index
+ */
 void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 {
 	chunkElements.SetNumUninitialized(chunkTotalSize);
@@ -128,7 +132,7 @@ void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 			{
 				int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
 
-				float density = CalcDensity((ChunkLocation.X * chunkXYSize) + x, (ChunkLocation.Y * chunkXYSize) + y, z);
+				float density = CalcDensity(ChunkLocation.X * (chunkXYSize - 2) + x - 1, ChunkLocation.Y * (chunkXYSize - 2) + y - 1, z);
 
 				if (density < 0.f)
 				{
@@ -207,14 +211,13 @@ void AVoxelChunk::GenerateChunk()
 	TArray<FVoxelChunkSection> ChunkSection;
 	ChunkSection.SetNum(VoxelMaterials.Num());
 
-	for (int32 x = 0; x < chunkXYSize; ++x)
+	for (int32 x = 1; x < chunkXYSize - 1; ++x)
 	{
-		for (int32 y = 0; y < chunkXYSize; ++y)
+		for (int32 y = 1; y < chunkXYSize - 1; ++y)
 		{
 			for (int32 z = 0; z < chunkZSize; ++z)
 			{
 				int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
-				/* TODO : Make Destroy Stage Variable */
 				int32 VoxelMeshIndex = static_cast<int32>(chunkElements[index]);
 				if (chunkElements[index] > EVoxelType::Count)
 				{
@@ -236,30 +239,40 @@ void AVoxelChunk::GenerateChunk()
 					int triangleVerticeNum = 0;
 					for (int i = 0; i < 6; ++i)
 					{
-						// next or previous Voxel for each side
-						int newIndex = index + bMask[i].X + (bMask[i].Y * chunkXYSize) + (bMask[i].Z * chunkXYSizeX2);
-
-						bool flag = true;
-
-						FVector newIndexVector(x, y, z);
-						newIndexVector += bMask[i];
-
-						if ((newIndexVector.X < chunkXYSize) && (newIndexVector.X >= 0) &&
-							(newIndexVector.Y < chunkXYSize) && (newIndexVector.Y >= 0) &&
-							(newIndexVector.Z < chunkZSize) && (newIndexVector.Z >= 0))
+						bool flag = false;
+						// check tree
+						if (chunkElements[index] == EVoxelType::Leaves || chunkElements[index] == EVoxelType::Log)
 						{
-							if (newIndex < chunkElements.Num() && newIndex >= 0)
+							flag = true;
+						}
+
+						// next or previous Voxel for each side
+						if (!flag)
+						{
+							flag = true;
+
+							int newIndex = index + bMask[i].X + (bMask[i].Y * chunkXYSize) + (bMask[i].Z * chunkXYSizeX2);
+
+							FVector newIndexVector(x, y, z);
+							newIndexVector += bMask[i];
+
+							if ((newIndexVector.X < chunkXYSize) && (newIndexVector.X >= 0) &&
+								(newIndexVector.Y < chunkXYSize) && (newIndexVector.Y >= 0) &&
+								(newIndexVector.Z < chunkZSize) && (newIndexVector.Z >= 0))
 							{
-								// exist side voxel
-								if (chunkElements[newIndex] != EVoxelType::Empty)
+								if (newIndex < chunkElements.Num() && newIndex >= 0)
 								{
-									flag = false;
-								}
-								else if ((i == 0) && (chunkElements[index] == EVoxelType::Dirt)) // no voxel top side, Grow grass
-								{
-									if (!chunkElementsTime.Contains(index))
+									// exist side voxel
+									if (chunkElements[newIndex] != EVoxelType::Empty)
 									{
-										chunkElementsTime.Add(index, 0.f);
+										flag = false;
+									}
+									else if ((i == 0) && (chunkElements[index] == EVoxelType::Dirt)) // no voxel top side, Grow grass
+									{
+										if (!chunkElementsTime.Contains(index))
+										{
+											chunkElementsTime.Add(index, 0.f);
+										}
 									}
 								}
 							}
@@ -273,6 +286,7 @@ void AVoxelChunk::GenerateChunk()
 							}
 							triangleVerticeNum += 4;
 
+							x -= 1; y -= 1;
 							switch (i)
 							{
 							case 0:
@@ -338,10 +352,9 @@ void AVoxelChunk::GenerateChunk()
 							default:
 								break;
 							}
+							x += 1; y += 1;
 
 							UV.Append(bUVs, ARRAY_COUNT(bUVs));
-
-							auto density = CalcDensity(x, y, z);
 
 							// color.R - DestroyVoxelStage, color.G - isChangeVoxel
 							FColor color(0, 0, 0, i);
