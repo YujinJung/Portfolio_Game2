@@ -19,6 +19,7 @@ enum class EVoxelType : uint8
 	Stone,
 	Log,
 	Leaves,
+	Leaves_Far,
 	Count,
 	Dirt_Grass,
 };

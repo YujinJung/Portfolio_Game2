@@ -79,6 +79,8 @@ void AMyPlayerController::UpdateChunkMap()
 
 	const int x = floor(PlayerLocation.X);
 	const int y = floor(PlayerLocation.Y);
+	FVector2D StandChunkCoord = FVector2D(x, y);
+	int StandChunkIndex = FindChunkIndex(StandChunkCoord);
 
 	static int x_i = 0; // 0 1 2 3 ... ChunkRange 0 1 2 ... 
 	static int y_i = 1; // 1 -1 1 -1
@@ -95,19 +97,47 @@ void AMyPlayerController::UpdateChunkMap()
 
 	for (int j = yStart; j <= yEnd; ++j)
 	{
-		int CurX = x + x_i;
-		int CurY = y + j;
-		FVector2D CurrentIndex = FVector2D(CurX, CurY);
+		FVector2D CheckChunkCoord(x + x_i, y + j);
+		int CheckChunkIndex = FindChunkIndex(CheckChunkCoord);
 
-		//if (!ChunkArray.Contains<FVector2D>(CurrentIndex))
-		if (FindChunkIndex(CurrentIndex) == -1)
+		if (CheckChunkIndex == -1)
 		{
-			if (CheckRadius(FVector(CurrentIndex * ChunkSize, 0.f), MaxChunkRadius))
+			if (CheckRadius(FVector(CheckChunkCoord * ChunkSize, 0.f), MaxChunkRadius))
 			{
-				AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(CurrentIndex * ChunkSize, 0.f), FRotator::ZeroRotator);
-				SpawnChunk->SetChunkIndex(CurrentIndex);
-				SpawnChunk->GenerateVoxelType(FVector(CurrentIndex, 0.f));
+				AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(CheckChunkCoord * ChunkSize, 0.f), FRotator::ZeroRotator);
+				SpawnChunk->SetChunkIndex(CheckChunkCoord);
+				SpawnChunk->GenerateVoxelType(FVector(CheckChunkCoord, 0.f));
 				ChunkArray.Add(MoveTemp(SpawnChunk));
+			}
+		}
+		else
+		{
+			auto& CheckChunk = ChunkArray[CheckChunkIndex];
+
+			if ((StandChunkIndex != CheckChunkIndex) && (CheckChunk->IsCurrentChunk()))
+			{
+				CheckChunk->SetIsCurrentChunk(false);
+				CheckChunk->GenerateVoxelType(FVector(CheckChunkCoord, 0.f));
+			}
+		}
+	}
+
+	/* Refresh Stand Chunk */
+	for (int i = -1; i <= 1; ++i)
+	{
+		for (int j = -1; j <= 1; ++j)
+		{
+			FVector2D StandAroundChunkCoord(x + i, y + j);
+			int StandAroundChunkIndex = FindChunkIndex(StandAroundChunkCoord);
+
+			if (StandAroundChunkIndex != -1)
+			{
+				auto& StandAroundChunk = ChunkArray[StandAroundChunkIndex];
+				if (!StandAroundChunk->IsCurrentChunk())
+				{
+					StandAroundChunk->SetIsCurrentChunk(true);
+					StandAroundChunk->GenerateVoxelType(FVector(StandAroundChunkCoord, 0.f));
+				}
 			}
 		}
 	}

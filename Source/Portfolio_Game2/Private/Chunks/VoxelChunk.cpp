@@ -40,6 +40,7 @@ AVoxelChunk::AVoxelChunk()
 	VoxelMeshComponent->RegisterComponent();
 	RootComponent = VoxelMeshComponent;
 	VoxelMeshComponent->bUseAsyncCooking = true;
+	bIsCurrentChunk = false;
 
 	voxelSize = 100;
 	voxelHalfSize = voxelSize / 2;
@@ -64,6 +65,7 @@ AVoxelChunk::AVoxelChunk()
 	AddVoxelMaterial(TEXT("M_Stone"));
 	AddVoxelMaterial(TEXT("M_Log"));
 	AddVoxelMaterial(TEXT("M_Leaves"));
+	AddVoxelMaterial(TEXT("M_Leaves_Far"));
 }
 
 void AVoxelChunk::AddVoxelMaterial(FString MaterialName)
@@ -195,7 +197,14 @@ void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 					{
 						if ((RandomStream.FRand() < 0.08f) || ((abs(x) < 2) && (abs(y) < 2)))
 						{
-							chunkElements[index] = EVoxelType::Leaves;
+							if (bIsCurrentChunk)
+							{
+								chunkElements[index] = EVoxelType::Leaves;
+							}
+							else
+							{
+								chunkElements[index] = EVoxelType::Leaves_Far;
+							}
 						}
 					}
 				}
@@ -241,7 +250,7 @@ void AVoxelChunk::GenerateChunk()
 					{
 						bool flag = false;
 						// check tree
-						if (chunkElements[index] == EVoxelType::Leaves || chunkElements[index] == EVoxelType::Log)
+						if (chunkElements[index] == EVoxelType::Leaves || chunkElements[index] == EVoxelType::Leaves_Far || chunkElements[index] == EVoxelType::Log)
 						{
 							flag = true;
 						}
@@ -286,6 +295,14 @@ void AVoxelChunk::GenerateChunk()
 							}
 							triangleVerticeNum += 4;
 
+							/* vertex position
+							 * ######
+							 * #****#
+							 * #****#
+							 * ######
+							 * * is current chunk, # is next chunk
+							 * -1 is # (next chunk)
+							 */
 							x -= 1; y -= 1;
 							switch (i)
 							{
@@ -477,8 +494,8 @@ bool AVoxelChunk::DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, floa
 {
 	// Round off
 	FVector LocalVoxelLocation = VoxelLocation + voxelHalfSize * FVector::OneVector;
-	int32 x = LocalVoxelLocation.X / voxelSize;
-	int32 y = LocalVoxelLocation.Y / voxelSize;
+	int32 x = LocalVoxelLocation.X / voxelSize + 1;
+	int32 y = LocalVoxelLocation.Y / voxelSize + 1;
 	int32 z = LocalVoxelLocation.Z / voxelSize;
 	int32 DestroyVoxelIndex = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
 
@@ -504,7 +521,7 @@ bool AVoxelChunk::DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, floa
 
 		return true;
 	}
-	else
+	else // Destroy 1, 2, 3, ... stage | Do not destroy voxel, only change destroy effect(vertex color)
 	{
 		// Section Index
 		int32 SectionIndex = static_cast<int32>(chunkElements[DestroyVoxelIndex]) - 1;

@@ -67,11 +67,18 @@ public:
 	FORCEINLINE FVector2D GetChunkIndex() const { return ChunkIndex; }
 	UFUNCTION()
 	void SetChunkIndex(const FVector2D& _chunkIndex);
+	UFUNCTION()
+	FORCEINLINE bool IsCurrentChunk() const { return bIsCurrentChunk; }
+	UFUNCTION()
+	void SetIsCurrentChunk(const bool& _bIsCurrentChunk) { bIsCurrentChunk = _bIsCurrentChunk; }
 
 private:
 	/* Use FindChunk By Index*/
 	UPROPERTY()
 	FVector2D ChunkIndex;
+
+	UPROPERTY()
+	bool bIsCurrentChunk;
 
 	UPROPERTY()
 	TArray<class UMaterial*> VoxelMaterials;
