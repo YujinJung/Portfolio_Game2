@@ -232,7 +232,7 @@ void AVoxelChunk::GenerateChunk()
 				{
 					VoxelMeshIndex -= static_cast<int32>(EVoxelType::Count);
 				}
-				VoxelMeshIndex--;
+				VoxelMeshIndex--; // EVoxelType::Empty
 
 				if (VoxelMeshIndex >= 0)
 				{
@@ -418,6 +418,26 @@ void AVoxelChunk::GenerateChunk()
 	{
 		VoxelMeshComponent->SetMaterial(MaterialIndex, VoxelMaterials[MaterialIndex]);
 	}
+}
+
+/*
+ * Refresh Leaves Material 
+ */
+void AVoxelChunk::RefreshLeaves()
+{
+	for (auto& e : chunkElements)
+	{
+		if (bIsCurrentChunk && (e == EVoxelType::Leaves_Far))
+		{
+			e = EVoxelType::Leaves;
+		}
+		else if (!bIsCurrentChunk && (e == EVoxelType::Leaves))
+		{
+			e = EVoxelType::Leaves_Far;
+		}
+	}
+
+	GenerateChunk();
 }
 
 /*

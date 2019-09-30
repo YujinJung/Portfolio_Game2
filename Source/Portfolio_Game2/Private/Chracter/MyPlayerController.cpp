@@ -117,7 +117,7 @@ void AMyPlayerController::UpdateChunkMap()
 			if ((StandChunkIndex != CheckChunkIndex) && (CheckChunk->IsCurrentChunk()))
 			{
 				CheckChunk->SetIsCurrentChunk(false);
-				CheckChunk->GenerateVoxelType(FVector(CheckChunkCoord, 0.f));
+				CheckChunk->RefreshLeaves();
 			}
 		}
 	}
@@ -136,7 +136,7 @@ void AMyPlayerController::UpdateChunkMap()
 				if (!StandAroundChunk->IsCurrentChunk())
 				{
 					StandAroundChunk->SetIsCurrentChunk(true);
-					StandAroundChunk->GenerateVoxelType(FVector(StandAroundChunkCoord, 0.f));
+					StandAroundChunk->RefreshLeaves();
 				}
 			}
 		}

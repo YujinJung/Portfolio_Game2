@@ -99,6 +99,9 @@ public:
 	void GenerateChunk();
 
 	UFUNCTION()
+	void RefreshLeaves();
+
+	UFUNCTION()
 	void RefreshMesh();
 
 
