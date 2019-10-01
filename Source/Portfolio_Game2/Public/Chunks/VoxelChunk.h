@@ -64,9 +64,9 @@ public:
 
 	/* Use FindChunk By Index*/
 	UFUNCTION()
-	FORCEINLINE FVector2D GetChunkIndex() const { return ChunkIndex; }
+	FORCEINLINE FVector GetChunkIndex() const { return ChunkIndex; }
 	UFUNCTION()
-	void SetChunkIndex(const FVector2D& _chunkIndex);
+	void SetChunkIndex(const FVector& _chunkIndex);
 	UFUNCTION()
 	FORCEINLINE bool IsCurrentChunk() const { return bIsCurrentChunk; }
 	UFUNCTION()
@@ -75,7 +75,7 @@ public:
 private:
 	/* Use FindChunk By Index*/
 	UPROPERTY()
-	FVector2D ChunkIndex;
+	FVector ChunkIndex;
 
 	UPROPERTY()
 	bool bIsCurrentChunk;

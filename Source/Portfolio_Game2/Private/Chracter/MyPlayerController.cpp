@@ -35,8 +35,9 @@ void AMyPlayerController::BeginPlay()
 	VoxelRangeInChunkX2 = VoxelRangeInChunk * 2;
 	ChunkSize = VoxelRangeInChunk * VoxelSize;
 
-	ChunkRangeInWorld = 16;
-	MaxChunkRadius = ChunkSize * ChunkRangeInWorld;
+	ChunkXYRangeInWorld = 10;
+	ChunkZRangeInWorld = 2;
+	MaxChunkRadius = ChunkSize * ChunkXYRangeInWorld;
 
 	DestroyVoxelChunkIndex = -1;
 	PlayerStandChunkIndex = 0;
@@ -62,7 +63,7 @@ void AMyPlayerController::Tick(float DeltaTime)
  */
 void AMyPlayerController::InitChunkMap()
 {
-	for (int index = 0; index < 4 * ChunkRangeInWorld + 1; ++index)
+	for (int index = 0; index < 4 * ChunkXYRangeInWorld + 1; ++index)
 	{
 		UpdateChunkMap();
 	}
@@ -79,7 +80,8 @@ void AMyPlayerController::UpdateChunkMap()
 
 	const int x = floor(PlayerLocation.X);
 	const int y = floor(PlayerLocation.Y);
-	FVector2D StandChunkCoord = FVector2D(x, y);
+	const int z = floor(PlayerLocation.Z);
+	FVector StandChunkCoord = FVector(x, y, z);
 	int StandChunkIndex = FindChunkIndex(StandChunkCoord);
 
 	static int x_i = 0; // 0 1 2 3 ... ChunkRange 0 1 2 ... 
@@ -87,14 +89,15 @@ void AMyPlayerController::UpdateChunkMap()
 	static int g_i = 1; // odd even check
 	
 	/* y = -ChunkRange ~ 0 / 0 ~ ChunkRange */
-	int yStart = (y_i == -1) ? -ChunkRangeInWorld : 0;
-	int yEnd = yStart + ChunkRangeInWorld;
+	int yStart = (y_i == -1) ? -ChunkXYRangeInWorld : 0;
+	int yEnd = yStart + ChunkXYRangeInWorld;
 	if (x_i == 0)
 	{
-		yStart = -ChunkRangeInWorld;
-		yEnd = ChunkRangeInWorld;
+		yStart = -ChunkXYRangeInWorld;
+		yEnd = ChunkXYRangeInWorld;
 	}
 
+	/*
 	for (int j = yStart; j <= yEnd; ++j)
 	{
 		FVector2D CheckChunkCoord(x + x_i, y + j);
@@ -121,22 +124,55 @@ void AMyPlayerController::UpdateChunkMap()
 			}
 		}
 	}
+	*/
+	for (int j = yStart; j <= yEnd; ++j)
+	{
+		for (int k = -ChunkZRangeInWorld; k <= ChunkZRangeInWorld; ++k)
+		{
+			FVector CheckChunkCoord(x + x_i, y + j, z + k);
+			int CheckChunkIndex = FindChunkIndex(CheckChunkCoord);
+
+			if (CheckChunkIndex == -1)
+			{
+				if (CheckRadius(FVector(CheckChunkCoord * ChunkSize), MaxChunkRadius))
+				{
+					AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(CheckChunkCoord * ChunkSize), FRotator::ZeroRotator);
+					SpawnChunk->SetChunkIndex(CheckChunkCoord);
+					SpawnChunk->GenerateVoxelType(FVector(CheckChunkCoord));
+					ChunkArray.Add(MoveTemp(SpawnChunk));
+				}
+			}
+			else
+			{
+				auto& CheckChunk = ChunkArray[CheckChunkIndex];
+
+				if ((StandChunkIndex != CheckChunkIndex) && (CheckChunk->IsCurrentChunk()))
+				{
+					CheckChunk->SetIsCurrentChunk(false);
+					CheckChunk->RefreshLeaves();
+				}
+			}
+		}
+	}
 
 	/* Refresh Stand Chunk */
 	for (int i = -1; i <= 1; ++i)
 	{
 		for (int j = -1; j <= 1; ++j)
 		{
-			FVector2D StandAroundChunkCoord(x + i, y + j);
-			int StandAroundChunkIndex = FindChunkIndex(StandAroundChunkCoord);
-
-			if (StandAroundChunkIndex != -1)
+			for (int k = -1; k <= 1; ++k)
 			{
-				auto& StandAroundChunk = ChunkArray[StandAroundChunkIndex];
-				if (!StandAroundChunk->IsCurrentChunk())
+				FVector StandAroundChunkCoord(x + i, y + j, z + k);
+				int StandAroundChunkIndex = FindChunkIndex(StandAroundChunkCoord);
+
+				if (StandAroundChunkIndex != -1)
 				{
-					StandAroundChunk->SetIsCurrentChunk(true);
-					StandAroundChunk->RefreshLeaves();
+					auto& StandAroundChunk = ChunkArray[StandAroundChunkIndex];
+					if (!StandAroundChunk->IsCurrentChunk())
+					{
+						StandAroundChunk->SetIsCurrentChunk(true);
+						StandAroundChunk->RefreshLeaves();
+					}
 				}
 			}
 		}
@@ -165,7 +201,7 @@ void AMyPlayerController::UpdateChunkMap()
 
 			if ((x_i >= 1) && (y_i == 1))
 			{
-				x_i = (x_i + 1) % ChunkRangeInWorld;
+				x_i = (x_i + 1) % ChunkXYRangeInWorld;
 			}
 		}
 
@@ -182,7 +218,7 @@ void AMyPlayerController::RemoveChunk()
 
 	for (int i = 0; i < ChunkArray.Num(); ++i)
 	{
-		const FVector CurrentChunkCoord(ChunkArray[i]->GetChunkIndex() * ChunkSize, 0.f);
+		const FVector CurrentChunkCoord(ChunkArray[i]->GetChunkIndex() * ChunkSize);
 
 		if (!CheckRadius(CurrentChunkCoord, MaxChunkRadius))
 		{
@@ -197,15 +233,15 @@ void AMyPlayerController::CheckPlayerStandChunk()
 	FVector PlayerLocation = GetPawn()->GetActorLocation();
 
 	// Calculate Chunk Index by player location
-	PlayerLocation.Z = 0.f;
 	PlayerLocation /= ChunkSize;
 	PlayerLocation.X = floor(PlayerLocation.X);
 	PlayerLocation.Y = floor(PlayerLocation.Y);
+	PlayerLocation.Z = floor(PlayerLocation.Z);
 
-	FVector2D PlayerChunkVector = FVector2D(PlayerLocation.X, PlayerLocation.Y);
+	FVector PlayerChunkVector(PlayerLocation.X, PlayerLocation.Y, PlayerLocation.Z);
 	int PlayerChunkIndex = FindChunkIndex(PlayerChunkVector);
 
-	const int updateIndex = 4 * ChunkRangeInWorld + 1;
+	const int updateIndex = (4 * ChunkXYRangeInWorld + 1) * (ChunkZRangeInWorld * 2 + 1); // 7 is z
 	// Plyaer Move && End Update
 	if ((PlayerStandChunkIndex != PlayerChunkIndex) && (GetWorldTimerManager().GetTimerElapsed(MapLoadTimerHandle) == -1))
 	{
@@ -238,10 +274,10 @@ bool AMyPlayerController::CheckRadius(const FVector& ChunkCoord, const float Rad
 	if (Radius == MaxChunkRadius)
 	{
 		// Calculate Chunk Index by player location
-		PlayerLocation.Z = 0.f;
 		PlayerLocation /= ChunkSize;
 		PlayerLocation.X = floor(PlayerLocation.X);
 		PlayerLocation.Y = floor(PlayerLocation.Y);
+		PlayerLocation.Z = floor(PlayerLocation.Z);
 
 		// Calculate Location Coord by index
 		PlayerLocation *= ChunkSize;
@@ -259,7 +295,7 @@ bool AMyPlayerController::CheckRadius(const FVector& ChunkCoord, const float Rad
 	return false;
 }
 
-int32 AMyPlayerController::FindChunkIndex(const FVector2D& findIndex)
+int32 AMyPlayerController::FindChunkIndex(const FVector& findIndex)
 {
 	for (int i = 0; i < ChunkArray.Num(); ++i)
 	{
@@ -285,7 +321,7 @@ void AMyPlayerController::PlaceVoxel()
 	{
 		FVector PlaceLocation = Hit.Location + Hit.Normal;
 		PlaceLocation /= ChunkSize;
-		FVector2D PlaceLocationChunkIndex(floor(PlaceLocation.X), floor(PlaceLocation.Y));
+		FVector PlaceLocationChunkIndex(floor(PlaceLocation.X), floor(PlaceLocation.Y), floor(PlaceLocation.Z));
 		index = FindChunkIndex(PlaceLocationChunkIndex);
 
 		FVector VoxelLocalLocation = Hit.Location - ChunkArray[index]->GetActorLocation() + Hit.Normal;
@@ -350,10 +386,10 @@ bool AMyPlayerController::CheckVoxel(FHitResult& OutHit, int32& index)
 	TraceParams.AddIgnoredActor(GetPawn());
 
 	// Draw LineTrace
-	//const FName TraceTag("MyTraceTag");
-	//auto world = GetWorld();
-	//world->DebugDrawTraceTag = TraceTag;
-	//TraceParams.TraceTag = TraceTag;
+	const FName TraceTag("MyTraceTag");
+	auto world = GetWorld();
+	world->DebugDrawTraceTag = TraceTag;
+	TraceParams.TraceTag = TraceTag;
 
 	GetWorld()->LineTraceSingleByChannel(OutHit, StartTrace, EndTrace, ECollisionChannel::ECC_WorldStatic, TraceParams);
 
@@ -361,8 +397,9 @@ bool AMyPlayerController::CheckVoxel(FHitResult& OutHit, int32& index)
 	{
 		const float x = floor(OutHit.GetActor()->GetActorLocation().X / ChunkSize);
 		const float y = floor(OutHit.GetActor()->GetActorLocation().Y / ChunkSize);
+		const float z = floor(OutHit.GetActor()->GetActorLocation().Z / ChunkSize);
 
-		FVector2D HitChunk(x, y);
+		FVector HitChunk(x, y, z);
 		index = FindChunkIndex(HitChunk);
 
 		return ((index != INDEX_NONE) ? true : false);

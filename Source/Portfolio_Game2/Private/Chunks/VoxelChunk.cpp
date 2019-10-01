@@ -45,8 +45,8 @@ AVoxelChunk::AVoxelChunk()
 	voxelSize = 100;
 	voxelHalfSize = voxelSize / 2;
 
-	chunkXYSize = 18;
-	chunkZSize = 50;
+	chunkXYSize = 18; // 16 + 2
+	chunkZSize = 18;  // 8 + 2
 	chunkXYSizeX2 = chunkXYSize * chunkXYSize;
 	chunkTotalSize = chunkXYSize * chunkXYSize * chunkZSize;
 
@@ -93,7 +93,7 @@ void AVoxelChunk::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
-void AVoxelChunk::SetChunkIndex(const FVector2D& _chunkIndex)
+void AVoxelChunk::SetChunkIndex(const FVector& _chunkIndex)
 {
 	ChunkIndex = _chunkIndex;
 	chunkXIndex = _chunkIndex.X;
@@ -108,7 +108,6 @@ float AVoxelChunk::CalcDensity(float x, float y, float z)
 	float noise = USimplexNoiseBPLibrary::SimplexNoise3D(x * 0.02f, y * 0.02f, z * 0.03f);
 
 	float cliff = (noise * 0.5f + 0.5f) * cliffScale;
-	//float density = (noise + cliff) * noiseScale + offset - z;
 	float density = (noise + cliff) * noiseScale + offset - z;
 	//UE_LOG(LogTemp, Warning, TEXT("Noise : %.4f"), noise);
 	return density;
@@ -116,6 +115,7 @@ float AVoxelChunk::CalcDensity(float x, float y, float z)
 
 /*
  * Generate Voxel Type
+ * Call only when spawned
  * @param ChunkLocation : chunk location index
  */
 void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
@@ -134,7 +134,7 @@ void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 			{
 				int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
 
-				float density = CalcDensity(ChunkLocation.X * (chunkXYSize - 2) + x - 1, ChunkLocation.Y * (chunkXYSize - 2) + y - 1, z);
+				float density = CalcDensity(ChunkLocation.X * (chunkXYSize - 2) + x - 1, ChunkLocation.Y * (chunkXYSize - 2) + y - 1, ChunkLocation.Z * (chunkZSize - 2) + z - 1);
 
 				if (density < 0.f)
 				{
@@ -167,7 +167,7 @@ void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 		}
 	}
 
-
+	// Tree Type
 	for (auto& e : TreeIndex)
 	{
 		for (int x = -2; x < 3; ++x)
@@ -188,7 +188,7 @@ void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 					}
 					int32 index = tIndex_x + (tIndex_y * chunkXYSize) + (tIndex_z * chunkXYSizeX2);
 
-					/* Center */
+					// Center
 					if ((x == 0) && (y == 0) && (z < 5))
 					{
 						chunkElements[index] = EVoxelType::Log;
@@ -197,14 +197,7 @@ void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 					{
 						if ((RandomStream.FRand() < 0.08f) || ((abs(x) < 2) && (abs(y) < 2)))
 						{
-							if (bIsCurrentChunk)
-							{
-								chunkElements[index] = EVoxelType::Leaves;
-							}
-							else
-							{
-								chunkElements[index] = EVoxelType::Leaves_Far;
-							}
+							chunkElements[index] = EVoxelType::Leaves_Far;
 						}
 					}
 				}
@@ -224,7 +217,7 @@ void AVoxelChunk::GenerateChunk()
 	{
 		for (int32 y = 1; y < chunkXYSize - 1; ++y)
 		{
-			for (int32 z = 0; z < chunkZSize; ++z)
+			for (int32 z = 1; z < chunkZSize - 1; ++z)
 			{
 				int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
 				int32 VoxelMeshIndex = static_cast<int32>(chunkElements[index]);
@@ -303,7 +296,7 @@ void AVoxelChunk::GenerateChunk()
 							 * * is current chunk, # is next chunk
 							 * -1 is # (next chunk)
 							 */
-							x -= 1; y -= 1;
+							x -= 1; y -= 1; z -= 1;
 							switch (i)
 							{
 							case 0:
@@ -369,7 +362,7 @@ void AVoxelChunk::GenerateChunk()
 							default:
 								break;
 							}
-							x += 1; y += 1;
+							x += 1; y += 1; z += 1;
 
 							UV.Append(bUVs, ARRAY_COUNT(bUVs));
 

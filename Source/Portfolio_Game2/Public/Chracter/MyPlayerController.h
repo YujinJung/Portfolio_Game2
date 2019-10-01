@@ -40,7 +40,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
 	int32 VoxelRangeInChunkX2;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
-	int32 ChunkRangeInWorld;
+	int32 ChunkXYRangeInWorld;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+	int32 ChunkZRangeInWorld;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
 	TArray<AVoxelChunk*> ChunkArray;
@@ -76,7 +78,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Chunk)
 	void RemoveChunk();
 	UFUNCTION(BlueprintCallable, Category = Chunk)
-	int32 FindChunkIndex(const FVector2D& findIndex);
+	int32 FindChunkIndex(const FVector& findIndex);
 
 	UFUNCTION()
 	void CheckPlayerStandChunk();
