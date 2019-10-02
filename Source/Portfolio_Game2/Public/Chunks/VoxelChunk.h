@@ -92,11 +92,11 @@ public:
 
 	/* Decide voxel type */
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	void GenerateVoxelType(const FVector& PlayerLocation);
+	bool GenerateVoxelType(const FVector& PlayerLocation);
 
 	/* Generate Mesh */
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	void GenerateChunk();
+	bool GenerateChunk();
 
 	UFUNCTION()
 	void RefreshLeaves();

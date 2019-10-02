@@ -46,7 +46,7 @@ AVoxelChunk::AVoxelChunk()
 	voxelHalfSize = voxelSize / 2;
 
 	chunkXYSize = 18; // 16 + 2
-	chunkZSize = 18;  // 8 + 2
+	chunkZSize = 18; 
 	chunkXYSizeX2 = chunkXYSize * chunkXYSize;
 	chunkTotalSize = chunkXYSize * chunkXYSize * chunkZSize;
 
@@ -118,7 +118,7 @@ float AVoxelChunk::CalcDensity(float x, float y, float z)
  * Call only when spawned
  * @param ChunkLocation : chunk location index
  */
-void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
+bool AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 {
 	chunkElements.SetNumUninitialized(chunkTotalSize);
 	TArray<FIntVector> TreeIndex;
@@ -130,17 +130,18 @@ void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 		{
 			bool isTop = true; // check top 
 			int airCount = 0;
-			for (int32 z = chunkZSize - 1; z >= 0; --z)
+			for (int32 z = chunkXYSize - 1; z >= 0; --z)
 			{
 				int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
 
-				float density = CalcDensity(ChunkLocation.X * (chunkXYSize - 2) + x - 1, ChunkLocation.Y * (chunkXYSize - 2) + y - 1, ChunkLocation.Z * (chunkZSize - 2) + z - 1);
+				auto densityCoord = [&chunkXYSize = chunkXYSize](const float& a, const int32& b) { return (a * (chunkXYSize - 2) + b - 1); };
+				float density = CalcDensity(densityCoord(ChunkLocation.X, x), densityCoord(ChunkLocation.Y, y), densityCoord(ChunkLocation.Z, z));
 
 				if (density < 0.f)
 				{
 					chunkElements[index] = EVoxelType::Empty;
 					airCount++;
-					if (airCount == 3) { isTop = true; }
+					if (airCount == 3) { isTop = true; airCount = 0; }
 				}
 				/*else if ((density + ((1 - (z / chunkZSize)) * 4.5f)) >= 5.f)
 				{
@@ -150,7 +151,8 @@ void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 				{
 					if (isTop)
 					{
-						if (RandomStream.FRand() < 0.01)
+						static auto CheckEdge = [&chunkXYSize = chunkXYSize](const int& x) -> bool { return ((x == 0) || (x == chunkXYSize - 1)) ? false : true; };
+						if (CheckEdge(x) && CheckEdge(y) && RandomStream.FRand() < 0.01)
 						{
 							TreeIndex.Add(FIntVector(x, y, z + 1));
 						}
@@ -205,11 +207,13 @@ void AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 		}
 	}
 
-	GenerateChunk();
+	return GenerateChunk();
 }
 
-void AVoxelChunk::GenerateChunk()
+bool AVoxelChunk::GenerateChunk()
 {
+	bool ret = false;
+
 	TArray<FVoxelChunkSection> ChunkSection;
 	ChunkSection.SetNum(VoxelMaterials.Num());
 
@@ -282,6 +286,8 @@ void AVoxelChunk::GenerateChunk()
 
 						if (flag)
 						{
+							ret = true;
+
 							for (int j = 0; j < 6; ++j)
 							{
 								Triangles.Add(bTriangles[j] + triangleVerticeNum + elementID);
@@ -411,6 +417,8 @@ void AVoxelChunk::GenerateChunk()
 	{
 		VoxelMeshComponent->SetMaterial(MaterialIndex, VoxelMaterials[MaterialIndex]);
 	}
+
+	return ret;
 }
 
 /*
@@ -477,9 +485,9 @@ bool AVoxelChunk::SetVoxel(const FVector& VoxelLocation, EVoxelType& value)
 {
 	// Round off
 	FVector LocalVoxelLocation = VoxelLocation + voxelHalfSize * FVector::OneVector;
-	int32 x = LocalVoxelLocation.X / voxelSize;
-	int32 y = LocalVoxelLocation.Y / voxelSize;
-	int32 z = LocalVoxelLocation.Z / voxelSize;
+	int32 x = LocalVoxelLocation.X / voxelSize + 1;
+	int32 y = LocalVoxelLocation.Y / voxelSize + 1;
+	int32 z = LocalVoxelLocation.Z / voxelSize + 1;
 
 	int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
 
@@ -509,7 +517,7 @@ bool AVoxelChunk::DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, floa
 	FVector LocalVoxelLocation = VoxelLocation + voxelHalfSize * FVector::OneVector;
 	int32 x = LocalVoxelLocation.X / voxelSize + 1;
 	int32 y = LocalVoxelLocation.Y / voxelSize + 1;
-	int32 z = LocalVoxelLocation.Z / voxelSize;
+	int32 z = LocalVoxelLocation.Z / voxelSize + 1;
 	int32 DestroyVoxelIndex = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
 
 	// Change Destroy Voxel

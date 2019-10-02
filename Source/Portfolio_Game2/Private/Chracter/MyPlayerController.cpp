@@ -36,7 +36,7 @@ void AMyPlayerController::BeginPlay()
 	ChunkSize = VoxelRangeInChunk * VoxelSize;
 
 	ChunkXYRangeInWorld = 10;
-	ChunkZRangeInWorld = 2;
+	ChunkZRangeInWorld = 3;
 	MaxChunkRadius = ChunkSize * ChunkXYRangeInWorld;
 
 	DestroyVoxelChunkIndex = -1;
@@ -63,9 +63,37 @@ void AMyPlayerController::Tick(float DeltaTime)
  */
 void AMyPlayerController::InitChunkMap()
 {
-	for (int index = 0; index < 4 * ChunkXYRangeInWorld + 1; ++index)
+	FVector PlayerLocation = GetPawn()->GetActorLocation();
+	PlayerLocation /= ChunkSize;
+
+	const int x = floor(PlayerLocation.X);
+	const int y = floor(PlayerLocation.Y);
+	const int z = floor(PlayerLocation.Z);
+
+	TArray<bool> bHasVoxel;
+	bHasVoxel.Init(false, VoxelRangeInChunk * VoxelRangeInChunk);
+	for (int i = -ChunkXYRangeInWorld; i <= ChunkXYRangeInWorld; ++i)
 	{
-		UpdateChunkMap();
+		for (int j = -ChunkXYRangeInWorld; j <= ChunkXYRangeInWorld; ++j)
+		{
+			for (int k = -ChunkZRangeInWorld; k <= ChunkZRangeInWorld; ++k)
+			{
+				FVector SpawnChunkCoord(x + i, y + j, z + k);
+				int32 SpawnChunkIndex = FindChunkIndex(SpawnChunkCoord);
+
+				AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(SpawnChunkCoord * ChunkSize), FRotator::ZeroRotator);
+				SpawnChunk->SetChunkIndex(SpawnChunkCoord);
+				bool ret = SpawnChunk->GenerateVoxelType(FVector(SpawnChunkCoord));
+				if (ret)
+				{
+					ChunkArray.Add(MoveTemp(SpawnChunk));
+				}
+				else
+				{
+					SpawnChunk->Destroy();
+				}
+			}
+		}
 	}
 }
 
@@ -125,6 +153,9 @@ void AMyPlayerController::UpdateChunkMap()
 		}
 	}
 	*/
+
+	static const int32 chunkTotalSize = VoxelRangeInChunk * VoxelRangeInChunk;
+
 	for (int j = yStart; j <= yEnd; ++j)
 	{
 		for (int k = -ChunkZRangeInWorld; k <= ChunkZRangeInWorld; ++k)
@@ -138,8 +169,15 @@ void AMyPlayerController::UpdateChunkMap()
 				{
 					AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(CheckChunkCoord * ChunkSize), FRotator::ZeroRotator);
 					SpawnChunk->SetChunkIndex(CheckChunkCoord);
-					SpawnChunk->GenerateVoxelType(FVector(CheckChunkCoord));
-					ChunkArray.Add(MoveTemp(SpawnChunk));
+					bool ret = SpawnChunk->GenerateVoxelType(FVector(CheckChunkCoord));
+					if (ret)
+					{
+						ChunkArray.Add(MoveTemp(SpawnChunk));
+					}
+					else
+					{
+						SpawnChunk->Destroy();
+					}
 				}
 			}
 			else
@@ -156,11 +194,11 @@ void AMyPlayerController::UpdateChunkMap()
 	}
 
 	/* Refresh Stand Chunk */
-	for (int i = -1; i <= 1; ++i)
+	for (int i = -2; i <= 2; ++i)
 	{
-		for (int j = -1; j <= 1; ++j)
+		for (int j = -2; j <= 2; ++j)
 		{
-			for (int k = -1; k <= 1; ++k)
+			for (int k = -2; k <= 2; ++k)
 			{
 				FVector StandAroundChunkCoord(x + i, y + j, z + k);
 				int StandAroundChunkIndex = FindChunkIndex(StandAroundChunkCoord);
@@ -243,7 +281,7 @@ void AMyPlayerController::CheckPlayerStandChunk()
 
 	const int updateIndex = (4 * ChunkXYRangeInWorld + 1) * (ChunkZRangeInWorld * 2 + 1); // 7 is z
 	// Plyaer Move && End Update
-	if ((PlayerStandChunkIndex != PlayerChunkIndex) && (GetWorldTimerManager().GetTimerElapsed(MapLoadTimerHandle) == -1))
+	if ((PlayerChunkIndex != -1) && (PlayerStandChunkIndex != PlayerChunkIndex) && (GetWorldTimerManager().GetTimerElapsed(MapLoadTimerHandle) == -1))
 	{
 		GetWorldTimerManager().SetTimer(MapLoadTimerHandle, this, &AMyPlayerController::UpdateChunkMap, 0.2f, true, updateIndex * 0.1f);
 
