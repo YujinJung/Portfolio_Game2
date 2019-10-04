@@ -81,7 +81,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Chunk)
 	void RemoveChunk();
 	UFUNCTION(BlueprintCallable, Category = Chunk)
-	int32 FindChunkIndex(const FVector& findIndex);
+	int32 FindChunkIndex(const FIntVector& findIndex);
 
 	UFUNCTION()
 	void CheckPlayerStandChunk();
@@ -93,7 +93,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	void DestroyVoxel(float Value);
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	bool CheckVoxel(FHitResult& OutHit, int32& index);
+	bool CheckVoxel(FHitResult& OutHit, FIntVector& index);
 
 
 	// Reset Destory Voxel

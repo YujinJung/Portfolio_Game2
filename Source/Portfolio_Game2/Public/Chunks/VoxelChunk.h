@@ -64,9 +64,9 @@ public:
 
 	/* Use FindChunk By Index*/
 	UFUNCTION()
-	FORCEINLINE FVector GetChunkIndex() const { return ChunkIndex; }
+	FORCEINLINE FIntVector GetChunkIndex() const { return ChunkIndex; }
 	UFUNCTION()
-	void SetChunkIndex(const FVector& _chunkIndex);
+	void SetChunkIndex(const FIntVector& _chunkIndex);
 	UFUNCTION()
 	FORCEINLINE bool IsCurrentChunk() const { return bIsCurrentChunk; }
 	UFUNCTION()
@@ -75,7 +75,7 @@ public:
 private:
 	/* Use FindChunk By Index*/
 	UPROPERTY()
-	FVector ChunkIndex;
+	FIntVector ChunkIndex;
 
 	UPROPERTY()
 	bool bIsCurrentChunk;
@@ -148,7 +148,7 @@ private:
 public:
 	/* Set Voxel Type and return origin voxel type. Use Place Voxel*/
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	bool SetVoxel(const FVector& VoxelPos, EVoxelType& value);
+	bool SetVoxel(const FIntVector& VoxelPos, EVoxelType& value, bool bIsDestroying = false);
 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	bool DestroyVoxel(const FIntVector& VoxelLocation, EVoxelType& e, float Value);

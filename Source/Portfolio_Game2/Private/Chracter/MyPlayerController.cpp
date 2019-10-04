@@ -81,7 +81,7 @@ void AMyPlayerController::UpdateChunkMap()
 	const int x = floor(PlayerLocation.X);
 	const int y = floor(PlayerLocation.Y);
 	const int z = floor(PlayerLocation.Z);
-	FVector StandChunkCoord = FVector(x, y, z);
+	FIntVector StandChunkCoord(x, y, z);
 	int StandChunkIndex = FindChunkIndex(StandChunkCoord);
 
 	static int x_i = 0; // 0 1 2 3 ... ChunkRange 0 1 2 ... 
@@ -132,7 +132,7 @@ void AMyPlayerController::UpdateChunkMap()
 	{
 		for (int k = -ChunkZRangeInWorld; k <= ChunkZRangeInWorld; ++k)
 		{
-			FVector CheckChunkCoord(x + x_i, y + j, z + k);
+			FIntVector CheckChunkCoord(x + x_i, y + j, z + k);
 			int CheckChunkIndex = FindChunkIndex(CheckChunkCoord);
 
 			if (CheckChunkIndex == -1)
@@ -172,7 +172,7 @@ void AMyPlayerController::UpdateChunkMap()
 		{
 			for (int k = -2; k <= 2; ++k)
 			{
-				FVector StandAroundChunkCoord(x + i, y + j, z + k);
+				FIntVector StandAroundChunkCoord(x + i, y + j, z + k);
 				int StandAroundChunkIndex = FindChunkIndex(StandAroundChunkCoord);
 
 				if (StandAroundChunkIndex != -1)
@@ -248,10 +248,10 @@ void AMyPlayerController::CheckPlayerStandChunk()
 	PlayerLocation.Y = floor(PlayerLocation.Y);
 	PlayerLocation.Z = floor(PlayerLocation.Z);
 
-	FVector PlayerChunkVector(PlayerLocation.X, PlayerLocation.Y, PlayerLocation.Z);
+	FIntVector PlayerChunkVector(PlayerLocation.X, PlayerLocation.Y, PlayerLocation.Z);
 	int PlayerChunkIndex = FindChunkIndex(PlayerChunkVector);
 
-	const int updateIndex = (4 * ChunkXYRangeInWorld + 1) * (ChunkZRangeInWorld * 2 + 1); // 7 is z
+	const int updateIndex = 4 * ChunkXYRangeInWorld + 1; // 7 is z
 	// Plyaer Move && End Update
 	if ((PlayerChunkIndex != -1) && (PlayerStandChunkIndex != PlayerChunkIndex) && (GetWorldTimerManager().GetTimerElapsed(MapLoadTimerHandle) == -1))
 	{
@@ -305,7 +305,7 @@ bool AMyPlayerController::CheckRadius(const FVector& ChunkCoord, const float Rad
 	return false;
 }
 
-int32 AMyPlayerController::FindChunkIndex(const FVector& findIndex)
+int32 AMyPlayerController::FindChunkIndex(const FIntVector& findIndex)
 {
 	for (int i = 0; i < ChunkArray.Num(); ++i)
 	{
@@ -325,19 +325,20 @@ void AMyPlayerController::PlaceVoxel()
 	}
 
 	FHitResult Hit;
-	int32 index;
-
-	if (CheckVoxel(Hit, index))
+	FIntVector ChunkCoord;
+	if (CheckVoxel(Hit, ChunkCoord))
 	{
 		FVector PlaceLocation = Hit.Location + Hit.Normal;
 		PlaceLocation /= ChunkSize;
-		FVector PlaceLocationChunkIndex(floor(PlaceLocation.X), floor(PlaceLocation.Y), floor(PlaceLocation.Z));
-		index = FindChunkIndex(PlaceLocationChunkIndex);
+		FIntVector PlaceLocationChunkIndex(floor(PlaceLocation.X), floor(PlaceLocation.Y), floor(PlaceLocation.Z));
+		int32 ChunkIndex = FindChunkIndex(PlaceLocationChunkIndex);
 
-		FVector VoxelLocalLocation = Hit.Location - ChunkArray[index]->GetActorLocation() + Hit.Normal;
+		FVector VoxelLocalLocation = Hit.Location - ChunkArray[ChunkIndex]->GetActorLocation() + (VoxelSize / 2) * FVector::OneVector + Hit.Normal;
+		VoxelLocalLocation = VoxelLocalLocation / VoxelSize + FVector::OneVector;
+
 		EVoxelType PlaceVoxelType = QuickSlotUI->GetCurrentVoxelItem().VoxelType;
 
-		if (ChunkArray[index]->SetVoxel(VoxelLocalLocation, PlaceVoxelType))
+		if (ChunkArray[ChunkIndex]->SetVoxel(FIntVector(VoxelLocalLocation), PlaceVoxelType))
 		{
 			QuickSlotUI->CurrentVoxelMinusOne();
 		}
@@ -354,8 +355,14 @@ void AMyPlayerController::DestroyVoxel(float Value)
 	if (Value != 0.f)
 	{
 		FHitResult Hit;
-		int32 ChunkIndex;
-		if (CheckVoxel(Hit, ChunkIndex))
+		FIntVector ChunkCoord;
+		if (!CheckVoxel(Hit, ChunkCoord)) 
+		{
+			return;
+		}
+		int32 ChunkIndex = FindChunkIndex(ChunkCoord);
+
+		if (ChunkIndex != INDEX_NONE)
 		{
 			if (ChunkIndex != DestroyVoxelChunkIndex)
 			{
@@ -372,6 +379,56 @@ void AMyPlayerController::DestroyVoxel(float Value)
 			EVoxelType DestroyedVoxelType = EVoxelType::Empty;
 			if (ChunkArray[ChunkIndex]->DestroyVoxel(FIntVector(VoxelLocalLocation), DestroyedVoxelType, Value))
 			{
+				// Refresh
+				// ChunkArray[index]->SetVoxel(FIntVector(VoxelLocalLocation), PlaceVoxelType)
+				{
+					FIntVector v(VoxelLocalLocation);
+
+					auto CheckSideChunk = [&](const FIntVector& ChunkOffset, const FIntVector& VoxelOffset1, const FIntVector& VoxelOffset2) {
+						FIntVector CheckChunkCoord = ChunkCoord + ChunkOffset;
+						int32 CheckChunkIndex = FindChunkIndex(CheckChunkCoord);
+						FIntVector CheckVoxelLocalLocation(VoxelLocalLocation);
+						CheckVoxelLocalLocation.X *= VoxelOffset1.X;
+						CheckVoxelLocalLocation.Y *= VoxelOffset1.Y;
+						CheckVoxelLocalLocation.Z *= VoxelOffset1.Z;
+
+						CheckVoxelLocalLocation += VoxelOffset2;
+
+						EVoxelType e = EVoxelType::Empty;
+						ChunkArray[CheckChunkIndex]->SetVoxel(CheckVoxelLocalLocation, e, true);
+					};
+
+					// 0 ~ 17 - 0, 17 is edge and 1 ~ 16 is chunk voxel
+					// destroy voxel index 1 and 16 is first, last index voxel
+					if (v.X == 1)
+					{
+						CheckSideChunk(FIntVector(-1, 0, 0), FIntVector(0, 1, 1), FIntVector(VoxelRangeInChunk + 1, 0, 0));
+					}
+					if (v.X == VoxelRangeInChunk)
+					{
+						CheckSideChunk(FIntVector(1, 0, 0), FIntVector(0, 1, 1), FIntVector(0, 0, 0));
+					}
+
+					if (v.Y == 1)
+					{
+						CheckSideChunk(FIntVector(0, -1, 0), FIntVector(1, 0, 1), FIntVector(0, VoxelRangeInChunk + 1, 0));
+					}
+					if (v.Y == VoxelRangeInChunk)
+					{
+						CheckSideChunk(FIntVector(0, 1, 0), FIntVector(1, 0, 1), FIntVector(0, 0, 0));
+					}
+
+					if (v.Z == 1)
+					{
+						CheckSideChunk(FIntVector(0, 0, -1), FIntVector(1, 1, 0), FIntVector(0, 0, VoxelRangeInChunk + 1));
+					}
+					if (v.Z == VoxelRangeInChunk)
+					{
+						CheckSideChunk(FIntVector(0, 0, 1), FIntVector(1, 1, 0), FIntVector(0, 0, 0));
+					}
+				}
+
+
 				// Drop Destroy Voxel
 				ADestroyedVoxel* DestroyedVoxel = GetWorld()->SpawnActor<ADestroyedVoxel>(HitLocation, FRotator::ZeroRotator);
 				DestroyedVoxel->GenerateVoxel(HitLocation, DestroyedVoxelType);
@@ -382,7 +439,7 @@ void AMyPlayerController::DestroyVoxel(float Value)
 	}
 }
 
-bool AMyPlayerController::CheckVoxel(FHitResult& OutHit, int32& ChunkIndex)
+bool AMyPlayerController::CheckVoxel(FHitResult& OutHit, FIntVector& ChunkIndex)
 {
 	FVector CamLocation;
 	FRotator CamRotation;
@@ -411,10 +468,9 @@ bool AMyPlayerController::CheckVoxel(FHitResult& OutHit, int32& ChunkIndex)
 		const float y = floor(OutHit.GetActor()->GetActorLocation().Y / ChunkSize);
 		const float z = floor(OutHit.GetActor()->GetActorLocation().Z / ChunkSize);
 
-		FVector HitChunk(x, y, z);
-		ChunkIndex = FindChunkIndex(HitChunk);
+		ChunkIndex = FIntVector(x, y, z);
 
-		return ((ChunkIndex != INDEX_NONE) ? true : false);
+		return true;
 	}
 	else
 	{

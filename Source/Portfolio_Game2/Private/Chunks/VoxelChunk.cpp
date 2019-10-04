@@ -93,7 +93,7 @@ void AVoxelChunk::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
-void AVoxelChunk::SetChunkIndex(const FVector& _chunkIndex)
+void AVoxelChunk::SetChunkIndex(const FIntVector& _chunkIndex)
 {
 	ChunkIndex = _chunkIndex;
 	chunkXIndex = _chunkIndex.X;
@@ -169,37 +169,37 @@ bool AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 		}
 	}
 
-	// Tree Type
-	for (auto& e : TreeIndex)
 	{
-		for (int x = -2; x < 3; ++x)
+		// Tree Type
+		for (auto& e : TreeIndex)
 		{
-			for (int y = -2; y < 3; ++y)
+			for (int x = -2; x < 3; ++x)
 			{
-				for (int z = 0; z < 6; ++z)
+				for (int y = -2; y < 3; ++y)
 				{
-					const int tIndex_x = x + e.X;
-					const int tIndex_y = y + e.Y;
-					const int tIndex_z = z + e.Z;
-
-					if((tIndex_x < 0) || (tIndex_x >= chunkXYSize) 
-						|| (tIndex_y < 0) || (tIndex_y >= chunkXYSize)
-						|| (tIndex_z < 0) || (tIndex_z >= chunkZSize))
+					for (int z = 0; z < 6; ++z)
 					{
-						continue;
-					}
-					int32 index = tIndex_x + (tIndex_y * chunkXYSize) + (tIndex_z * chunkXYSizeX2);
-
-					// Center
-					if ((x == 0) && (y == 0) && (z < 5))
-					{
-						chunkElements[index] = EVoxelType::Log;
-					}
-					else if(z > 1)
-					{
-						if ((RandomStream.FRand() < 0.08f) || ((abs(x) < 2) && (abs(y) < 2)))
+						const int tIndex_x = x + e.X;
+						const int tIndex_y = y + e.Y;
+						const int tIndex_z = z + e.Z;
+						if ((tIndex_x < 0) || (tIndex_x >= chunkXYSize)
+							|| (tIndex_y < 0) || (tIndex_y >= chunkXYSize)
+							|| (tIndex_z < 0) || (tIndex_z >= chunkZSize))
 						{
-							chunkElements[index] = EVoxelType::Leaves_Far;
+							continue;
+						}
+						int32 index = tIndex_x + (tIndex_y * chunkXYSize) + (tIndex_z * chunkXYSizeX2);
+						// Center
+						if ((x == 0) && (y == 0) && (z < 5))
+						{
+							chunkElements[index] = EVoxelType::Log;
+						}
+						else if (z > 1)
+						{
+							if ((RandomStream.FRand() < 0.08f) || ((abs(x) < 2) && (abs(y) < 2)))
+							{
+								chunkElements[index] = EVoxelType::Leaves_Far;
+							}
 						}
 					}
 				}
@@ -481,21 +481,15 @@ void AVoxelChunk::RefreshMesh()
  * @param VoxelLocation - Voxel Location
  * @param value			- Set Voxel Type / Return Voxel original type
  */
-bool AVoxelChunk::SetVoxel(const FVector& VoxelLocation, EVoxelType& value)
+bool AVoxelChunk::SetVoxel(const FIntVector& VoxelLocation, EVoxelType& value, bool bIsDestroying)
 {
-	// Round off
-	FVector LocalVoxelLocation = VoxelLocation + voxelHalfSize * FVector::OneVector;
-	int32 x = LocalVoxelLocation.X / voxelSize + 1;
-	int32 y = LocalVoxelLocation.Y / voxelSize + 1;
-	int32 z = LocalVoxelLocation.Z / voxelSize + 1;
-
-	int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
+	int32 index = VoxelLocation.X + (VoxelLocation.Y * chunkXYSize) + (VoxelLocation.Z * chunkXYSizeX2);
 
 	// Range Check
 	if ((index >= 0) && (index < chunkElements.Num()))
 	{
 		EVoxelType ret = chunkElements[index];
-		if (ret != EVoxelType::Empty) { return false; }
+		if (!bIsDestroying && ret != EVoxelType::Empty) { return false; }
 
 		chunkElements[index] = value;
 		value = ret;
@@ -514,10 +508,6 @@ bool AVoxelChunk::SetVoxel(const FVector& VoxelLocation, EVoxelType& value)
 bool AVoxelChunk::DestroyVoxel(const FIntVector& VoxelLocation, EVoxelType& e, float Value)
 {
 	// Round off
-	/*int32 x = VoxelLocation.X;
-	int32 y = VoxelLocation.Y;
-	int32 z = VoxelLocation.Z;
-	int32 DestroyVoxelIndex = x + (y * chunkXYSize) + (z * chunkXYSizeX2);*/
 	int32 DestroyVoxelIndex = VoxelLocation.X + (VoxelLocation.Y * chunkXYSize) + (VoxelLocation.Z * chunkXYSizeX2);
 
 	// Change Destroy Voxel
