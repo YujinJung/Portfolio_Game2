@@ -63,37 +63,9 @@ void AMyPlayerController::Tick(float DeltaTime)
  */
 void AMyPlayerController::InitChunkMap()
 {
-	FVector PlayerLocation = GetPawn()->GetActorLocation();
-	PlayerLocation /= ChunkSize;
-
-	const int x = floor(PlayerLocation.X);
-	const int y = floor(PlayerLocation.Y);
-	const int z = floor(PlayerLocation.Z);
-
-	TArray<bool> bHasVoxel;
-	bHasVoxel.Init(false, VoxelRangeInChunk * VoxelRangeInChunk);
-	for (int i = -ChunkXYRangeInWorld; i <= ChunkXYRangeInWorld; ++i)
+	for (int index = 0; index < 4 * ChunkXYRangeInWorld + 1; ++index)
 	{
-		for (int j = -ChunkXYRangeInWorld; j <= ChunkXYRangeInWorld; ++j)
-		{
-			for (int k = -ChunkZRangeInWorld; k <= ChunkZRangeInWorld; ++k)
-			{
-				FVector SpawnChunkCoord(x + i, y + j, z + k);
-				int32 SpawnChunkIndex = FindChunkIndex(SpawnChunkCoord);
-
-				AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(SpawnChunkCoord * ChunkSize), FRotator::ZeroRotator);
-				SpawnChunk->SetChunkIndex(SpawnChunkCoord);
-				bool ret = SpawnChunk->GenerateVoxelType(FVector(SpawnChunkCoord));
-				if (ret)
-				{
-					ChunkArray.Add(MoveTemp(SpawnChunk));
-				}
-				else
-				{
-					SpawnChunk->Destroy();
-				}
-			}
-		}
+		UpdateChunkMap();
 	}
 }
 
@@ -382,23 +354,25 @@ void AMyPlayerController::DestroyVoxel(float Value)
 	if (Value != 0.f)
 	{
 		FHitResult Hit;
-		int32 index;
-		if (CheckVoxel(Hit, index))
+		int32 ChunkIndex;
+		if (CheckVoxel(Hit, ChunkIndex))
 		{
-			if (index != DestroyVoxelChunkIndex)
+			if (ChunkIndex != DestroyVoxelChunkIndex)
 			{
 				SetDestroyVoxelValueZero();
-				DestroyVoxelChunkIndex = index;
+				DestroyVoxelChunkIndex = ChunkIndex;
 			}
 
 			FVector DirectionVector = (Hit.Location - GetPawn()->GetActorLocation()).GetSafeNormal();
 			FVector HitLocation = Hit.Location + DirectionVector;
-			FVector VoxelLocalLocation = HitLocation - ChunkArray[index]->GetActorLocation();
+			FVector VoxelLocalLocation = HitLocation - ChunkArray[ChunkIndex]->GetActorLocation() + (VoxelSize / 2) * FVector::OneVector;
+			VoxelLocalLocation = VoxelLocalLocation / VoxelSize + FVector::OneVector;
 
 			// DestroyedVoxelType - Return the type of destroyed voxel
 			EVoxelType DestroyedVoxelType = EVoxelType::Empty;
-			if (ChunkArray[index]->DestroyVoxel(VoxelLocalLocation, DestroyedVoxelType, Value))
+			if (ChunkArray[ChunkIndex]->DestroyVoxel(FIntVector(VoxelLocalLocation), DestroyedVoxelType, Value))
 			{
+				// Drop Destroy Voxel
 				ADestroyedVoxel* DestroyedVoxel = GetWorld()->SpawnActor<ADestroyedVoxel>(HitLocation, FRotator::ZeroRotator);
 				DestroyedVoxel->GenerateVoxel(HitLocation, DestroyedVoxelType);
 				DestroyedVoxel->SetNum(1);
@@ -408,7 +382,7 @@ void AMyPlayerController::DestroyVoxel(float Value)
 	}
 }
 
-bool AMyPlayerController::CheckVoxel(FHitResult& OutHit, int32& index)
+bool AMyPlayerController::CheckVoxel(FHitResult& OutHit, int32& ChunkIndex)
 {
 	FVector CamLocation;
 	FRotator CamRotation;
@@ -438,9 +412,9 @@ bool AMyPlayerController::CheckVoxel(FHitResult& OutHit, int32& index)
 		const float z = floor(OutHit.GetActor()->GetActorLocation().Z / ChunkSize);
 
 		FVector HitChunk(x, y, z);
-		index = FindChunkIndex(HitChunk);
+		ChunkIndex = FindChunkIndex(HitChunk);
 
-		return ((index != INDEX_NONE) ? true : false);
+		return ((ChunkIndex != INDEX_NONE) ? true : false);
 	}
 	else
 	{

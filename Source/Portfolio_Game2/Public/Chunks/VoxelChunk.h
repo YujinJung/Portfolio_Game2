@@ -151,7 +151,7 @@ public:
 	bool SetVoxel(const FVector& VoxelPos, EVoxelType& value);
 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	bool DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, float Value);
+	bool DestroyVoxel(const FIntVector& VoxelLocation, EVoxelType& e, float Value);
 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	void InitDestroyVoxel();

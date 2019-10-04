@@ -511,14 +511,14 @@ bool AVoxelChunk::SetVoxel(const FVector& VoxelLocation, EVoxelType& value)
 /*
  * DestroyVoxel
  */
-bool AVoxelChunk::DestroyVoxel(const FVector& VoxelLocation, EVoxelType& e, float Value)
+bool AVoxelChunk::DestroyVoxel(const FIntVector& VoxelLocation, EVoxelType& e, float Value)
 {
 	// Round off
-	FVector LocalVoxelLocation = VoxelLocation + voxelHalfSize * FVector::OneVector;
-	int32 x = LocalVoxelLocation.X / voxelSize + 1;
-	int32 y = LocalVoxelLocation.Y / voxelSize + 1;
-	int32 z = LocalVoxelLocation.Z / voxelSize + 1;
-	int32 DestroyVoxelIndex = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
+	/*int32 x = VoxelLocation.X;
+	int32 y = VoxelLocation.Y;
+	int32 z = VoxelLocation.Z;
+	int32 DestroyVoxelIndex = x + (y * chunkXYSize) + (z * chunkXYSizeX2);*/
+	int32 DestroyVoxelIndex = VoxelLocation.X + (VoxelLocation.Y * chunkXYSize) + (VoxelLocation.Z * chunkXYSizeX2);
 
 	// Change Destroy Voxel
 	if (DestroyVoxelIndex != CurrentDestroyVoxelIndex)

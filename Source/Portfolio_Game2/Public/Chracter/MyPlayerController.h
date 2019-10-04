@@ -9,6 +9,7 @@
 class AVoxelChunk;
 class ADestroyedVoxel;
 class UQuickSlot;
+enum class EVoxelType : uint8;
 
 UCLASS()
 class AMyPlayerController : public APlayerController
@@ -47,6 +48,8 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
 	TArray<AVoxelChunk*> ChunkArray;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
+	TMap<FString, EVoxelType> VoxelArray;
 
 	// Refresh Chunk
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
