@@ -16,8 +16,8 @@ AMyCharacter::AMyCharacter()
 {
 	GetCapsuleComponent()->InitCapsuleSize(35.f, 80.f);
 
-	BaseTurnAtRate = 45.f;
-	BaseLookUpAtRate = 45.f;
+	BaseTurnAtRate = 80.f;
+	BaseLookUpAtRate = 80.f;
 
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->JumpZVelocity = 400.f;
@@ -82,7 +82,18 @@ void AMyCharacter::TurnAtRate(float Rate)
 {
 	if (!isPause)
 	{
-		AddControllerYawInput(Rate * BaseTurnAtRate * GetWorld()->GetDeltaSeconds());
+		float R = Rate * BaseTurnAtRate * GetWorld()->GetDeltaSeconds();
+		float MinMaxRate = 0.8f;
+
+		if (R < -MinMaxRate)
+		{
+			R = -MinMaxRate;
+		}
+		else if (R > MinMaxRate)
+		{
+			R = MinMaxRate;
+		}
+		AddControllerYawInput(R);
 	}
 }
 
@@ -90,7 +101,18 @@ void AMyCharacter::LookUpAtRate(float Rate)
 {
 	if (!isPause)
 	{
-		AddControllerPitchInput(Rate * BaseLookUpAtRate * GetWorld()->GetDeltaSeconds());
+		float R = Rate * BaseLookUpAtRate * GetWorld()->GetDeltaSeconds();
+		float MinMaxRate = 0.8f;
+
+		if (R < -MinMaxRate)
+		{
+			R = -MinMaxRate;
+		}
+		else if (R > MinMaxRate)
+		{
+			R = MinMaxRate;
+		}
+		AddControllerPitchInput(R);
 	}
 }
 

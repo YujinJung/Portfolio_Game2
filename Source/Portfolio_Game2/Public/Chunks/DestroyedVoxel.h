@@ -37,12 +37,15 @@ public:
 	FORCEINLINE EVoxelType GetVoxelItemType() { return VoxelInfo.VoxelType; }
 	UFUNCTION(BlueprintPure, Category = DestroyedVoxel)
 	FORCEINLINE int32 GetVoxelItemNum() { return VoxelInfo.Num; }
+
+	UFUNCTION(BlueprintCallable, Category = DestroyedVoxel)
+	void AddVoxelMaterial(FString MaterialName);
 	
 private:
 	UPROPERTY()
 	class UProceduralMeshComponent* VoxelMeshComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
-	class UMaterial* VoxelMaterials;
+	TArray<class UMaterial*> VoxelMaterials;
 	UPROPERTY()
 	FVoxelItemInfo VoxelInfo;
 

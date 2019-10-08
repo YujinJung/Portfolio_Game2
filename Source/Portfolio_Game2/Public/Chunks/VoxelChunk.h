@@ -41,6 +41,20 @@ public:
 	int32 elementID = 0;
 };
 
+USTRUCT(BlueprintType)
+struct FVoxelCoord
+{
+	GENERATED_USTRUCT_BODY();
+public:
+	FVoxelCoord() {}
+	FVoxelCoord(const FIntVector& _c, const EVoxelType& _e)
+		: Coord(_c), VoxelType(_e)
+	{ }
+
+	FIntVector Coord;
+	EVoxelType VoxelType;
+};
+
 
 UCLASS()
 class PORTFOLIO_GAME2_API AVoxelChunk : public AActor
@@ -67,10 +81,16 @@ public:
 	FORCEINLINE FIntVector GetChunkIndex() const { return ChunkIndex; }
 	UFUNCTION()
 	void SetChunkIndex(const FIntVector& _chunkIndex);
+
 	UFUNCTION()
 	FORCEINLINE bool IsCurrentChunk() const { return bIsCurrentChunk; }
 	UFUNCTION()
 	void SetIsCurrentChunk(const bool& _bIsCurrentChunk) { bIsCurrentChunk = _bIsCurrentChunk; }
+
+	UFUNCTION()
+	FORCEINLINE bool IsTopChunk() const { return bIsTopChunk; }
+	UFUNCTION()
+	void SetIsTopChunk(const bool& _bIsTopChunk) { bIsTopChunk = _bIsTopChunk; }
 
 private:
 	/* Use FindChunk By Index*/
@@ -79,6 +99,9 @@ private:
 
 	UPROPERTY()
 	bool bIsCurrentChunk;
+
+	UPROPERTY()
+	bool bIsTopChunk;
 
 	UPROPERTY()
 	TArray<class UMaterial*> VoxelMaterials;
@@ -93,6 +116,14 @@ public:
 	/* Decide voxel type */
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	bool GenerateVoxelType(const FVector& PlayerLocation);
+
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	void DrawVoxels(TArray<FVoxelChunkSection>& ChunkSection, int32& triangleVerticeNum, FIntVector VoxelIndex, const int32& VoxelMeshIndex, const int32& triangleSide);
+
+
+	/* Generate Tree */
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	void GenerateTree(TArray<FVoxelChunkSection>& ChunkSection);
 
 	/* Generate Mesh */
 	UFUNCTION(BlueprintCallable, Category = Voxel)
@@ -111,6 +142,13 @@ private:
 
 	UPROPERTY()
 	TArray<EVoxelType> chunkElements;
+
+	// Tree / FVector
+	UPROPERTY()
+	TArray<FIntVector> TreeIndex;
+	UPROPERTY()
+	TArray<FVoxelCoord> TreeCoord;
+
 
 	/* Spawn Tree Random Seed */
 	UPROPERTY()
@@ -166,12 +204,19 @@ private:
 	/* Destroy */
 	UPROPERTY()
 	int32 CurrentDestroyVoxelIndex; // -1 : no Destroy Voxel
+
 	UPROPERTY()
 	EVoxelType CurrentDestroyVoxelType;
+
+	UPROPERTY()
+	bool bIsDestroyingTree;
+
 	UPROPERTY()
 	float DestroyStage;
+
 	UPROPERTY()
 	float DestroySpeed; // speed
+
 	UPROPERTY()
 	float MaxDestroyValue;
 

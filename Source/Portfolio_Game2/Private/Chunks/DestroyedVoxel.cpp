@@ -41,7 +41,7 @@ ADestroyedVoxel::ADestroyedVoxel()
 	VoxelMeshComponent->RegisterComponent();
 	RootComponent = VoxelMeshComponent;
 
-	voxelSize = 15;
+	voxelSize = 20;
 	voxelHalfSize = voxelSize / 2;
 	originalVoxelHalfSize = 50.f;
 	RunningTime = 0.f;
@@ -50,8 +50,13 @@ ADestroyedVoxel::ADestroyedVoxel()
 	VoxelInfo.VoxelType = EVoxelType::Empty;
 	VoxelInfo.Num = 0;
 
-	FString MaterialPath(TEXT("/Game/MinecraftContents/Materials/Voxels/M_Voxel"));
-	VoxelMaterials = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
+	AddVoxelMaterial(TEXT("M_Dirt"));
+	AddVoxelMaterial(TEXT("M_Grass"));
+	AddVoxelMaterial(TEXT("M_Sand"));
+	AddVoxelMaterial(TEXT("M_Stone"));
+	AddVoxelMaterial(TEXT("M_Log"));
+	AddVoxelMaterial(TEXT("M_Leaves"));
+	AddVoxelMaterial(TEXT("M_Leaves_Far"));
 }
 
 
@@ -91,12 +96,26 @@ void ADestroyedVoxel::Tick(float DeltaTime)
 
 		DownRunningTime += DeltaTime;
 
-		if (DestroyedVoxelLocation.Z <= BaseLocation.Z)
+		if (DestroyedVoxelLocation.Z <= (BaseLocation.Z + originalVoxelHalfSize))
 		{
 			isDown = false;
 		}
 	}
 }
+
+
+void ADestroyedVoxel::AddVoxelMaterial(FString MaterialName)
+{
+	FString MaterialPath = TEXT("/Game/MinecraftContents/Materials/Voxels/");
+	MaterialPath.Append(MaterialName);
+	UMaterial* VoxelMaterial = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, *MaterialPath));
+
+	if (VoxelMaterial)
+	{
+		VoxelMaterials.Add(VoxelMaterial);
+	}
+}
+
 
 /*
  * Check Gravity and Move downward Setting
@@ -111,6 +130,12 @@ void ADestroyedVoxel::CheckGravity()
 	FCollisionQueryParams TraceParams(FName(TEXT("TraceParams")), true, this);
 	TraceParams.bReturnPhysicalMaterial = true;
 
+	// Draw LineTrace
+	const FName TraceTag("MyTraceTag");
+	auto world = GetWorld();
+	world->DebugDrawTraceTag = TraceTag;
+	TraceParams.TraceTag = TraceTag;
+
 	GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, EndTrace, ECollisionChannel::ECC_PhysicsBody, TraceParams);
 
 	if (Hit.GetActor() == NULL)
@@ -120,7 +145,7 @@ void ADestroyedVoxel::CheckGravity()
 
 	float DistanceBaseHit = BaseLocation.Z - Hit.Location.Z;
 	DownScale = DistanceBaseHit / originalVoxelHalfSize;
-	if (DistanceBaseHit < 10.f)
+	if (DistanceBaseHit < originalVoxelHalfSize)
 	{
 		DownScale = 0.f;
 	}
@@ -142,6 +167,11 @@ void ADestroyedVoxel::SetNum(int32 num)
 
 void ADestroyedVoxel::GenerateVoxel(const FVector& VoxelLocation, EVoxelType e)
 {
+	if (e == EVoxelType::Empty)
+	{
+		return;
+	}
+
 	TArray<FVector> Vertices;
 	TArray<int32> Triangles;
 	TArray<FVector> Normals;
@@ -153,93 +183,89 @@ void ADestroyedVoxel::GenerateVoxel(const FVector& VoxelLocation, EVoxelType e)
 
 	int32 triangleVerticeNum = 0;
 
-	const float& x = VoxelLocation.X;
-	const float& y = VoxelLocation.Y;
-	const float& z = VoxelLocation.Z;
-
 	for (int i = 0; i < 6; ++i)
 	{
-			for (int j = 0; j < 6; ++j)
-			{
-				Triangles.Add(bTriangles[j] + triangleVerticeNum);
-			}
-			triangleVerticeNum += 4;
+		for (int j = 0; j < 6; ++j)
+		{
+			Triangles.Add(bTriangles[j] + triangleVerticeNum);
+		}
+		triangleVerticeNum += 4;
 
-			switch (i)
-			{
-			case 0:
-			{
-				Vertices.Add(FVector(voxelHalfSize, 1.5f * voxelSize, 1.5f * voxelSize));
-				Vertices.Add(FVector(voxelHalfSize, voxelHalfSize, 1.5f * voxelSize));
-				Vertices.Add(FVector(1.5f * voxelSize, voxelHalfSize, 1.5f * voxelSize));
-				Vertices.Add(FVector(1.5f * voxelSize, 1.5f * voxelSize, 1.5f * voxelSize));
+		switch (i)
+		{
+		case 0:
+		{
+			Vertices.Add(FVector(-voxelHalfSize,voxelHalfSize,voxelHalfSize));
+			Vertices.Add(FVector(-voxelHalfSize, -voxelHalfSize,voxelHalfSize));
+			Vertices.Add(FVector(voxelHalfSize, -voxelHalfSize,voxelHalfSize));
+			Vertices.Add(FVector(voxelHalfSize,voxelHalfSize,voxelHalfSize));
 
-				Normals.Append(bNormals0, ARRAY_COUNT(bNormals0));
-				break;
-			}
-			case 1:
-			{
-				Vertices.Add(FVector(1.5f * voxelSize, voxelHalfSize, voxelHalfSize));
-				Vertices.Add(FVector(voxelHalfSize, voxelHalfSize, voxelHalfSize));
-				Vertices.Add(FVector(voxelHalfSize, 1.5f * voxelSize, voxelHalfSize));
-				Vertices.Add(FVector(1.5f * voxelSize, 1.5f * voxelSize, voxelHalfSize));
+			Normals.Append(bNormals0, ARRAY_COUNT(bNormals0));
+			break;
+		}
+		case 1:
+		{
+			Vertices.Add(FVector(voxelHalfSize, -voxelHalfSize, -voxelHalfSize));
+			Vertices.Add(FVector(-voxelHalfSize, -voxelHalfSize, -voxelHalfSize));
+			Vertices.Add(FVector(-voxelHalfSize,voxelHalfSize, -voxelHalfSize));
+			Vertices.Add(FVector(voxelHalfSize,voxelHalfSize, -voxelHalfSize));
 
-				Normals.Append(bNormals1, ARRAY_COUNT(bNormals1));
-				break;
-			}
-			case 2:
-			{
-				Vertices.Add(FVector(1.5f * voxelSize, 1.5f * voxelSize, 1.5f * voxelSize));
-				Vertices.Add(FVector(1.5f * voxelSize, 1.5f * voxelSize, voxelHalfSize));
-				Vertices.Add(FVector(voxelHalfSize, 1.5f * voxelSize, voxelHalfSize));
-				Vertices.Add(FVector(voxelHalfSize, 1.5f * voxelSize, 1.5f * voxelSize));
+			Normals.Append(bNormals1, ARRAY_COUNT(bNormals1));
+			break;
+		}
+		case 2:
+		{
+			Vertices.Add(FVector(voxelHalfSize,voxelHalfSize,voxelHalfSize));
+			Vertices.Add(FVector(voxelHalfSize,voxelHalfSize, -voxelHalfSize));
+			Vertices.Add(FVector(-voxelHalfSize,voxelHalfSize, -voxelHalfSize));
+			Vertices.Add(FVector(-voxelHalfSize,voxelHalfSize,voxelHalfSize));
 
-				Normals.Append(bNormals2, ARRAY_COUNT(bNormals2));
-				break;
-			}
-			case 3:
-			{
-				Vertices.Add(FVector(voxelHalfSize, voxelHalfSize, 1.5f * voxelSize));
-				Vertices.Add(FVector(voxelHalfSize, voxelHalfSize, voxelHalfSize));
-				Vertices.Add(FVector(1.5f * voxelSize, voxelHalfSize, voxelHalfSize));
-				Vertices.Add(FVector(1.5f * voxelSize, voxelHalfSize, 1.5f * voxelSize));
+			Normals.Append(bNormals2, ARRAY_COUNT(bNormals2));
+			break;
+		}
+		case 3:
+		{
+			Vertices.Add(FVector(-voxelHalfSize, -voxelHalfSize,voxelHalfSize));
+			Vertices.Add(FVector(-voxelHalfSize, -voxelHalfSize, -voxelHalfSize));
+			Vertices.Add(FVector(voxelHalfSize, -voxelHalfSize, -voxelHalfSize));
+			Vertices.Add(FVector(voxelHalfSize, -voxelHalfSize,voxelHalfSize));
 
-				Normals.Append(bNormals3, ARRAY_COUNT(bNormals3));
-				break;
-			}
-			case 4:
-			{
-				Vertices.Add(FVector(1.5f * voxelSize, voxelHalfSize, 1.5f * voxelSize));
-				Vertices.Add(FVector(1.5f * voxelSize, voxelHalfSize, voxelHalfSize));
-				Vertices.Add(FVector(1.5f * voxelSize, 1.5f * voxelSize, voxelHalfSize));
-				Vertices.Add(FVector(1.5f * voxelSize, 1.5f * voxelSize, 1.5f * voxelSize));
+			Normals.Append(bNormals3, ARRAY_COUNT(bNormals3));
+			break;
+		}
+		case 4:
+		{
+			Vertices.Add(FVector(voxelHalfSize, -voxelHalfSize,voxelHalfSize));
+			Vertices.Add(FVector(voxelHalfSize, -voxelHalfSize, -voxelHalfSize));
+			Vertices.Add(FVector(voxelHalfSize,voxelHalfSize, -voxelHalfSize));
+			Vertices.Add(FVector(voxelHalfSize,voxelHalfSize,voxelHalfSize));
 
-				Normals.Append(bNormals4, ARRAY_COUNT(bNormals4));
-				break;
-			}
-			case 5:
-			{
-				Vertices.Add(FVector(voxelHalfSize, 1.5f * voxelSize, 1.5f * voxelSize));
-				Vertices.Add(FVector(voxelHalfSize, 1.5f * voxelSize, voxelHalfSize));
-				Vertices.Add(FVector(voxelHalfSize, voxelHalfSize, voxelHalfSize));
-				Vertices.Add(FVector(voxelHalfSize, voxelHalfSize, 1.5f * voxelSize));
+			Normals.Append(bNormals4, ARRAY_COUNT(bNormals4));
+			break;
+		}
+		case 5:
+		{
+			Vertices.Add(FVector(-voxelHalfSize,voxelHalfSize,voxelHalfSize));
+			Vertices.Add(FVector(-voxelHalfSize,voxelHalfSize, -voxelHalfSize));
+			Vertices.Add(FVector(-voxelHalfSize, -voxelHalfSize, -voxelHalfSize));
+			Vertices.Add(FVector(-voxelHalfSize, -voxelHalfSize,voxelHalfSize));
 
-				Normals.Append(bNormals5, ARRAY_COUNT(bNormals5));
-				break;
-			}
-			default:
-				break;
-			}
+			Normals.Append(bNormals5, ARRAY_COUNT(bNormals5));
+			break;
+		}
+		default:
+			break;
+		}
 
-			UV.Append(bUVs, ARRAY_COUNT(bUVs));
+		UV.Append(bUVs, ARRAY_COUNT(bUVs));
 
-			// red = 1 -> Grass
-			FColor color(FColor(static_cast<int>(e), 0, 255, i));
+		// red = 1 -> Grass
+		FColor color(FColor(0, 0, 255, i));
 
-			for (int j = 0; j < 4; ++j)
-			{
-				VertexColors.Add(color);
-			}
+		for (int j = 0; j < 4; ++j)
+		{
+			VertexColors.Add(color);
+		}
 	}
 
 
@@ -247,10 +273,7 @@ void ADestroyedVoxel::GenerateVoxel(const FVector& VoxelLocation, EVoxelType e)
 
 	VoxelMeshComponent->CreateMeshSection(0, Vertices, Triangles, Normals, UV, VertexColors, Tangents, true);
 
-	if (VoxelMaterials)
-	{
-		VoxelMeshComponent->SetMaterial(0, VoxelMaterials);
-	}
+	VoxelMeshComponent->SetMaterial(0, VoxelMaterials[static_cast<int32>(e) - 1]);
 
 	BaseLocation = VoxelLocation;
 	SetActorLocation(BaseLocation);

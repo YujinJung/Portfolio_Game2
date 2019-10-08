@@ -56,8 +56,9 @@ AVoxelChunk::AVoxelChunk()
 	TreeRandomSeed = 10;
 
 	MaxDestroyValue = 80.f;
-	DestroySpeed = 1.f;
+	DestroySpeed = 0.1f;
 	isRunningTime = false;
+	bIsDestroyingTree = false;
 
 	AddVoxelMaterial(TEXT("M_Dirt"));
 	AddVoxelMaterial(TEXT("M_Grass"));
@@ -121,7 +122,6 @@ float AVoxelChunk::CalcDensity(float x, float y, float z)
 bool AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 {
 	chunkElements.SetNumUninitialized(chunkTotalSize);
-	TArray<FIntVector> TreeIndex;
 	FRandomStream RandomStream = FRandomStream(TreeRandomSeed);
 
 	for (int32 x = 0; x < chunkXYSize; ++x)
@@ -134,9 +134,19 @@ bool AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 			{
 				int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
 
-				auto densityCoord = [&chunkXYSize = chunkXYSize](const float& a, const int32& b) { return (a * (chunkXYSize - 2) + b - 1); };
+				auto densityCoord = [&chunkXYSize = chunkXYSize](const float& a, const int32& b) -> float { return (a * (chunkXYSize - 2) + b - 1); };
 				float density = CalcDensity(densityCoord(ChunkLocation.X, x), densityCoord(ChunkLocation.Y, y), densityCoord(ChunkLocation.Z, z));
+				
+				/*if (density > 0.f)
+				{
+					float _z = densityCoord(ChunkLocation.Z, z);
 
+					if (_z != 0)
+					{
+						density += 30.f * (1 / _z);
+					}
+				}*/
+			
 				if (density < 0.f)
 				{
 					chunkElements[index] = EVoxelType::Empty;
@@ -147,14 +157,18 @@ bool AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 				{
 					chunkElements[index] = EVoxelType::Stone;
 				}*/
+				else if (density >= 5.0f)
+				{
+					chunkElements[index] = EVoxelType::Stone;
+				}
 				else if (density >= 0.f)
 				{
 					if (isTop)
 					{
 						static auto CheckEdge = [&chunkXYSize = chunkXYSize](const int& x) -> bool { return ((x == 0) || (x == chunkXYSize - 1)) ? false : true; };
-						if (CheckEdge(x) && CheckEdge(y) && RandomStream.FRand() < 0.01)
+						if (bIsTopChunk && CheckEdge(x) && CheckEdge(y) && RandomStream.FRand() < 0.005f)
 						{
-							TreeIndex.Add(FIntVector(x, y, z + 1));
+							TreeIndex.Add(FIntVector(x - 1, y - 1, z));
 						}
 						chunkElements[index] = EVoxelType::Grass;
 						isTop = false;
@@ -182,23 +196,17 @@ bool AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 						const int tIndex_x = x + e.X;
 						const int tIndex_y = y + e.Y;
 						const int tIndex_z = z + e.Z;
-						if ((tIndex_x < 0) || (tIndex_x >= chunkXYSize)
-							|| (tIndex_y < 0) || (tIndex_y >= chunkXYSize)
-							|| (tIndex_z < 0) || (tIndex_z >= chunkZSize))
-						{
-							continue;
-						}
-						int32 index = tIndex_x + (tIndex_y * chunkXYSize) + (tIndex_z * chunkXYSizeX2);
+						
 						// Center
 						if ((x == 0) && (y == 0) && (z < 5))
 						{
-							chunkElements[index] = EVoxelType::Log;
+							TreeCoord.Add(FVoxelCoord(FIntVector(tIndex_x, tIndex_y, tIndex_z), EVoxelType::Log));
 						}
 						else if (z > 1)
 						{
 							if ((RandomStream.FRand() < 0.08f) || ((abs(x) < 2) && (abs(y) < 2)))
 							{
-								chunkElements[index] = EVoxelType::Leaves_Far;
+								TreeCoord.Add(FVoxelCoord(FIntVector(tIndex_x, tIndex_y, tIndex_z), EVoxelType::Leaves_Far));
 							}
 						}
 					}
@@ -208,6 +216,142 @@ bool AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 	}
 
 	return GenerateChunk();
+}
+
+void AVoxelChunk::GenerateTree(TArray<FVoxelChunkSection>& ChunkSection)
+{
+	int i = 0;
+	for (auto& e : TreeCoord)
+	{
+		const int32& TreeMeshIndex = static_cast<int32>(e.VoxelType) - 1;
+		if (TreeMeshIndex >= 0)
+		{
+			auto& elementID		= ChunkSection[TreeMeshIndex].elementID;
+			auto& VertexIndex	= ChunkSection[TreeMeshIndex].VertexIndex;
+			auto& VertexColors	= ChunkSection[TreeMeshIndex].VertexColors;
+
+			//int32 index = e.Coord.X + (e.Coord.Y * chunkXYSize) + (e.Coord.Z * chunkXYSizeX2);
+			int32 index = chunkElements.Num() + i;
+
+			int32 triangleVerticeNum = 0;
+			for (int32 i = 0; i < 6; ++i)
+			{
+				DrawVoxels(ChunkSection, triangleVerticeNum, e.Coord, TreeMeshIndex, i);
+
+				// color.R - DestroyVoxelStage, color.G - isChangeVoxel
+				FColor color(0, 0, 0, i);
+				// Destroy Stage
+				if (index == CurrentDestroyVoxelIndex)
+				{
+					color.R = DestroyStage / 10.f;
+				}
+				
+				for (int j = 0; j < 4; ++j)
+				{
+					VertexColors.Add(color);
+				}
+			}
+			VertexIndex.Add(index, FVoxelIndexInSection(elementID, triangleVerticeNum));
+			elementID += triangleVerticeNum;
+		}
+		++i;
+	}
+}
+
+void AVoxelChunk::DrawVoxels(TArray<FVoxelChunkSection>& ChunkSection, int32& triangleVerticeNum, FIntVector VoxelIndex, const int32& VoxelMeshIndex, const int32& triangleSide)
+{
+	auto& elementID = ChunkSection[VoxelMeshIndex].elementID;
+	auto& Vertices = ChunkSection[VoxelMeshIndex].Vertices;
+	auto& Triangles = ChunkSection[VoxelMeshIndex].Triangles;
+	auto& Normals = ChunkSection[VoxelMeshIndex].Normals;
+	auto& UV = ChunkSection[VoxelMeshIndex].UV;
+	auto& Tangents = ChunkSection[VoxelMeshIndex].Tangents;
+
+	for (int j = 0; j < 6; ++j)
+	{
+		Triangles.Add(bTriangles[j] + triangleVerticeNum + elementID);
+	}
+	triangleVerticeNum += 4;
+
+	/* vertex position
+	 * ######
+	 * #****#
+	 * #****#
+	 * ######
+	 * * is current chunk, # is next chunk
+	 * -1 is # (next chunk)
+	 */
+
+	int32& x = VoxelIndex.X;
+	int32& y = VoxelIndex.Y;
+	int32& z = VoxelIndex.Z;
+	switch (triangleSide)
+	{
+	case 0:
+	{
+		Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
+
+		Normals.Append(bNormals0, ARRAY_COUNT(bNormals0));
+		break;
+	}
+	case 1:
+	{
+		Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
+
+		Normals.Append(bNormals1, ARRAY_COUNT(bNormals1));
+		break;
+	}
+	case 2:
+	{
+		Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
+
+		Normals.Append(bNormals2, ARRAY_COUNT(bNormals2));
+		break;
+	}
+	case 3:
+	{
+		Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
+
+		Normals.Append(bNormals3, ARRAY_COUNT(bNormals3));
+		break;
+	}
+	case 4:
+	{
+		Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
+
+		Normals.Append(bNormals4, ARRAY_COUNT(bNormals4));
+		break;
+	}
+	case 5:
+	{
+		Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
+		Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
+
+		Normals.Append(bNormals5, ARRAY_COUNT(bNormals5));
+		break;
+	}
+	default:
+		break;
+	}
+
+	UV.Append(bUVs, ARRAY_COUNT(bUVs));
 }
 
 bool AVoxelChunk::GenerateChunk()
@@ -234,16 +378,11 @@ bool AVoxelChunk::GenerateChunk()
 				if (VoxelMeshIndex >= 0)
 				{
 					auto& elementID		= ChunkSection[VoxelMeshIndex].elementID;
-					auto& Vertices		= ChunkSection[VoxelMeshIndex].Vertices;
-					auto& Triangles		= ChunkSection[VoxelMeshIndex].Triangles;
-					auto& Normals		= ChunkSection[VoxelMeshIndex].Normals;
-					auto& UV			= ChunkSection[VoxelMeshIndex].UV;
-					auto& VertexColors	= ChunkSection[VoxelMeshIndex].VertexColors;
-					auto& Tangents		= ChunkSection[VoxelMeshIndex].Tangents;
 					auto& VertexIndex	= ChunkSection[VoxelMeshIndex].VertexIndex;
+					auto& VertexColors	= ChunkSection[VoxelMeshIndex].VertexColors;
 
-					int triangleVerticeNum = 0;
-					for (int i = 0; i < 6; ++i)
+					int32 triangleVerticeNum = 0;
+					for (int32 i = 0; i < 6; ++i)
 					{
 						bool flag = false;
 						// check tree
@@ -288,89 +427,7 @@ bool AVoxelChunk::GenerateChunk()
 						{
 							ret = true;
 
-							for (int j = 0; j < 6; ++j)
-							{
-								Triangles.Add(bTriangles[j] + triangleVerticeNum + elementID);
-							}
-							triangleVerticeNum += 4;
-
-							/* vertex position
-							 * ######
-							 * #****#
-							 * #****#
-							 * ######
-							 * * is current chunk, # is next chunk
-							 * -1 is # (next chunk)
-							 */
-							x -= 1; y -= 1; z -= 1;
-							switch (i)
-							{
-							case 0:
-							{
-								Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
-
-								Normals.Append(bNormals0, ARRAY_COUNT(bNormals0));
-								break;
-							}
-							case 1:
-							{
-								Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
-
-								Normals.Append(bNormals1, ARRAY_COUNT(bNormals1));
-								break;
-							}
-							case 2:
-							{
-								Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
-
-								Normals.Append(bNormals2, ARRAY_COUNT(bNormals2));
-								break;
-							}
-							case 3:
-							{
-								Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
-
-								Normals.Append(bNormals3, ARRAY_COUNT(bNormals3));
-								break;
-							}
-							case 4:
-							{
-								Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
-
-								Normals.Append(bNormals4, ARRAY_COUNT(bNormals4));
-								break;
-							}
-							case 5:
-							{
-								Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), -voxelHalfSize + (z * voxelSize)));
-								Vertices.Add(FVector(-voxelHalfSize + (x * voxelSize), -voxelHalfSize + (y * voxelSize), voxelHalfSize + (z * voxelSize)));
-
-								Normals.Append(bNormals5, ARRAY_COUNT(bNormals5));
-								break;
-							}
-							default:
-								break;
-							}
-							x += 1; y += 1; z += 1;
-
-							UV.Append(bUVs, ARRAY_COUNT(bUVs));
+							DrawVoxels(ChunkSection, triangleVerticeNum, FIntVector(x - 1, y - 1, z - 1), VoxelMeshIndex, i);
 
 							// color.R - DestroyVoxelStage, color.G - isChangeVoxel
 							FColor color(0, 0, 0, i);
@@ -399,6 +456,8 @@ bool AVoxelChunk::GenerateChunk()
 		}
 	}
 
+	GenerateTree(ChunkSection);
+
 	VoxelMeshComponent->ClearAllMeshSections();
 
 	for (int SectionIndex = 0; SectionIndex < ChunkSection.Num(); ++SectionIndex)
@@ -426,15 +485,15 @@ bool AVoxelChunk::GenerateChunk()
  */
 void AVoxelChunk::RefreshLeaves()
 {
-	for (auto& e : chunkElements)
+	for (auto& e : TreeCoord)
 	{
-		if (bIsCurrentChunk && (e == EVoxelType::Leaves_Far))
+		if (bIsCurrentChunk && (e.VoxelType == EVoxelType::Leaves_Far))
 		{
-			e = EVoxelType::Leaves;
+			e.VoxelType = EVoxelType::Leaves;
 		}
-		else if (!bIsCurrentChunk && (e == EVoxelType::Leaves))
+		else if (!bIsCurrentChunk && (e.VoxelType == EVoxelType::Leaves))
 		{
-			e = EVoxelType::Leaves_Far;
+			e.VoxelType = EVoxelType::Leaves_Far;
 		}
 	}
 
@@ -510,10 +569,50 @@ bool AVoxelChunk::DestroyVoxel(const FIntVector& VoxelLocation, EVoxelType& e, f
 	// Round off
 	int32 DestroyVoxelIndex = VoxelLocation.X + (VoxelLocation.Y * chunkXYSize) + (VoxelLocation.Z * chunkXYSizeX2);
 
+	auto FindTreeIndex = [&TreeCoord = TreeCoord, &VoxelLocation = VoxelLocation, &chunkElements = chunkElements](int32& _D) -> bool {
+		FIntVector TreeLocation = VoxelLocation - FIntVector(FVector::OneVector);
+		for (int32 i = 0; i < TreeCoord.Num(); ++i)
+		{
+			if (TreeCoord[i].Coord == TreeLocation)
+			{
+				_D = chunkElements.Num() + i;
+				return true;
+			}
+		}
+		return false;
+	};
+
+	if (DestroyVoxelIndex >= 0 && DestroyVoxelIndex < chunkElements.Num())
+	{
+		if (chunkElements[DestroyVoxelIndex] != EVoxelType::Empty   &&
+			chunkElements[DestroyVoxelIndex] != EVoxelType::Log     &&
+			chunkElements[DestroyVoxelIndex] != EVoxelType::Leaves  &&
+			chunkElements[DestroyVoxelIndex] != EVoxelType::Leaves_Far)
+		{
+			bIsDestroyingTree = false;
+		}
+		else
+		{
+			if (!FindTreeIndex(DestroyVoxelIndex))
+			{
+				return false;
+			}
+		}
+	}
+	else
+	{
+		bIsDestroyingTree = true;
+		if (!FindTreeIndex(DestroyVoxelIndex))
+		{
+			return false;
+		}
+	}
+
 	// Change Destroy Voxel
 	if (DestroyVoxelIndex != CurrentDestroyVoxelIndex)
 	{
 		DestroyStage = 0.f;
+
 		CurrentDestroyVoxelIndex = DestroyVoxelIndex;
 	}
 
@@ -526,16 +625,35 @@ bool AVoxelChunk::DestroyVoxel(const FIntVector& VoxelLocation, EVoxelType& e, f
 	{
 		InitDestroyVoxel();
 
-		e = chunkElements[DestroyVoxelIndex];
-		chunkElements[DestroyVoxelIndex] = EVoxelType::Empty;
+		if (!bIsDestroyingTree)
+		{
+			e = chunkElements[DestroyVoxelIndex];
+			chunkElements[DestroyVoxelIndex] = EVoxelType::Empty;
+		}
+		else
+		{
+			e = TreeCoord[DestroyVoxelIndex - chunkElements.Num()].VoxelType;
+			TreeCoord.RemoveAtSwap(DestroyVoxelIndex - chunkElements.Num());
+		}
+
 		GenerateChunk();
 
 		return true;
 	}
 	else // Destroy 1, 2, 3, ... stage | Do not destroy voxel, only change destroy effect(vertex color)
 	{
-		// Section Index
-		int32 SectionIndex = static_cast<int32>(chunkElements[DestroyVoxelIndex]) - 1;
+		int32 SectionIndex;
+
+		if (!bIsDestroyingTree)
+		{
+			// Section Index
+			SectionIndex = static_cast<int32>(chunkElements[DestroyVoxelIndex]) - 1;
+		}
+		else
+		{
+			SectionIndex = static_cast<int32>(TreeCoord[DestroyVoxelIndex - chunkElements.Num()].VoxelType) - 1;
+		}
+
 		if (SectionIndex < 0) { return false; } // Voxel is Empty
 		FVoxelChunkSection& ChunkSection = ChunkSectionInfo[SectionIndex];
 
@@ -552,6 +670,7 @@ bool AVoxelChunk::DestroyVoxel(const FIntVector& VoxelLocation, EVoxelType& e, f
 				VertexColors[ChangeVoxelIndex].R = DestroyStage / 10.f;
 			}
 		}
+
 		VoxelMeshComponent->UpdateMeshSection(SectionIndex,
 			ChunkSectionInfo[SectionIndex].Vertices,
 			ChunkSectionInfo[SectionIndex].Normals,
