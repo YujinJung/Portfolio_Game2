@@ -166,7 +166,7 @@ bool AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 					if (isTop)
 					{
 						static auto CheckEdge = [&chunkXYSize = chunkXYSize](const int& x) -> bool { return ((x == 0) || (x == chunkXYSize - 1)) ? false : true; };
-						if (bIsTopChunk && CheckEdge(x) && CheckEdge(y) && RandomStream.FRand() < 0.005f)
+						if (bIsTopChunk && CheckEdge(x) && CheckEdge(y) && RandomStream.FRand() < 0.01f)
 						{
 							TreeIndex.Add(FIntVector(x - 1, y - 1, z));
 						}
@@ -550,13 +550,21 @@ bool AVoxelChunk::SetVoxel(const FIntVector& VoxelLocation, EVoxelType& value, b
 		EVoxelType ret = chunkElements[index];
 		if (!bIsDestroying && ret != EVoxelType::Empty) { return false; }
 
-		chunkElements[index] = value;
+		if (value >= EVoxelType::Log && value <= EVoxelType::Leaves_Far)
+		{
+			TreeCoord.Add(FVoxelCoord(VoxelLocation - FIntVector(FVector::OneVector), value));
+			chunkElements[index] = EVoxelType::Empty;
+		}
+		else
+		{
+			chunkElements[index] = value;
+		}
+
 		value = ret;
-
 		GenerateChunk();
-
 		return true;
 	}
+	
 
 	return false;
 }
@@ -597,15 +605,16 @@ bool AVoxelChunk::DestroyVoxel(const FIntVector& VoxelLocation, EVoxelType& e, f
 			{
 				return false;
 			}
+			bIsDestroyingTree = true;
 		}
 	}
 	else
 	{
-		bIsDestroyingTree = true;
 		if (!FindTreeIndex(DestroyVoxelIndex))
 		{
 			return false;
 		}
+		bIsDestroyingTree = true;
 	}
 
 	// Change Destroy Voxel

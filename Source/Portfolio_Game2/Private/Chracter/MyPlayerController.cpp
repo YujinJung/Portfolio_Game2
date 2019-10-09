@@ -339,6 +339,7 @@ void AMyPlayerController::PlaceVoxel()
 		FVector PlaceLocation = Hit.Location + (Hit.Normal * VoxelSize / 2);
 		FVector PlayerLocation = GetPawn()->GetActorLocation();
 
+		// Player Position
 		if (FIntVector(PlaceLocation / VoxelSize) == FIntVector(PlayerLocation / VoxelSize))
 		{
 			return;
@@ -348,15 +349,35 @@ void AMyPlayerController::PlaceVoxel()
 		FIntVector PlaceLocationChunkIndex(floor(PlaceLocation.X), floor(PlaceLocation.Y), floor(PlaceLocation.Z));
 		int32 ChunkIndex = FindChunkIndex(PlaceLocationChunkIndex);
 
-		FVector VoxelLocalLocation = Hit.Location - ChunkArray[ChunkIndex]->GetActorLocation() + (VoxelSize / 2) * FVector::OneVector + Hit.Normal;
-		VoxelLocalLocation = VoxelLocalLocation / VoxelSize + FVector::OneVector;
-
 		EVoxelType PlaceVoxelType = QuickSlotUI->GetCurrentVoxelItem().VoxelType;
 
-		if (ChunkArray[ChunkIndex]->SetVoxel(FIntVector(VoxelLocalLocation), PlaceVoxelType))
+		if (ChunkIndex == INDEX_NONE)
 		{
-			QuickSlotUI->CurrentVoxelMinusOne();
+			
+			AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(PlaceLocationChunkIndex * ChunkSize), FRotator::ZeroRotator);
+			SpawnChunk->SetChunkIndex(PlaceLocationChunkIndex);
+			bool ret = SpawnChunk->GenerateVoxelType(FVector(PlaceLocationChunkIndex));
+
+			FVector VoxelLocalLocation = Hit.Location - SpawnChunk->GetActorLocation() + (VoxelSize / 2) * FVector::OneVector + Hit.Normal;
+			VoxelLocalLocation = VoxelLocalLocation / VoxelSize + FVector::OneVector;
+
+			if (!SpawnChunk->SetVoxel(FIntVector(VoxelLocalLocation), PlaceVoxelType))
+			{
+				return;
+			}
+
+			ChunkArray.Add(MoveTemp(SpawnChunk));
 		}
+		else
+		{
+			FVector VoxelLocalLocation = Hit.Location - ChunkArray[ChunkIndex]->GetActorLocation() + (VoxelSize / 2) * FVector::OneVector + Hit.Normal;
+			VoxelLocalLocation = VoxelLocalLocation / VoxelSize + FVector::OneVector;
+			if (!ChunkArray[ChunkIndex]->SetVoxel(FIntVector(VoxelLocalLocation), PlaceVoxelType))
+			{
+				return;
+			}
+		}
+		QuickSlotUI->CurrentVoxelMinusOne();
 	}
 }
 

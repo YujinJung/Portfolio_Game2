@@ -75,6 +75,9 @@ void ADestroyedVoxel::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	FVector DestroyedVoxelLocation = GetActorLocation();
+	FRotator DestroyedVoxelRotation = GetActorRotation();
+	float RotationSpeed = 0.1f;
+
 	/* floating voxel */
 	if (!isDown)
 	{
@@ -82,6 +85,7 @@ void ADestroyedVoxel::Tick(float DeltaTime)
 
 		DestroyedVoxelLocation.Z += deltaHeight * 10.f;
 		SetActorLocation(DestroyedVoxelLocation);
+		SetActorRotation(DestroyedVoxelRotation + FRotator(0.f, RotationSpeed, 0.f));
 
 		RunningTime += DeltaTime;
 
