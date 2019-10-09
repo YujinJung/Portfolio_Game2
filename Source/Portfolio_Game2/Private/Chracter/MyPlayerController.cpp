@@ -347,13 +347,13 @@ void AMyPlayerController::PlaceVoxel()
 		
 		PlaceLocation /= ChunkSize;
 		FIntVector PlaceLocationChunkIndex(floor(PlaceLocation.X), floor(PlaceLocation.Y), floor(PlaceLocation.Z));
+		LOG("dd %s", *PlaceLocationChunkIndex.ToString());
 		int32 ChunkIndex = FindChunkIndex(PlaceLocationChunkIndex);
 
 		EVoxelType PlaceVoxelType = QuickSlotUI->GetCurrentVoxelItem().VoxelType;
 
 		if (ChunkIndex == INDEX_NONE)
 		{
-			
 			AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(PlaceLocationChunkIndex * ChunkSize), FRotator::ZeroRotator);
 			SpawnChunk->SetChunkIndex(PlaceLocationChunkIndex);
 			bool ret = SpawnChunk->GenerateVoxelType(FVector(PlaceLocationChunkIndex));
@@ -367,6 +367,7 @@ void AMyPlayerController::PlaceVoxel()
 			}
 
 			ChunkArray.Add(MoveTemp(SpawnChunk));
+			QuickSlotUI->CurrentVoxelMinusOne();
 		}
 		else
 		{
@@ -376,8 +377,8 @@ void AMyPlayerController::PlaceVoxel()
 			{
 				return;
 			}
+			QuickSlotUI->CurrentVoxelMinusOne();
 		}
-		QuickSlotUI->CurrentVoxelMinusOne();
 	}
 }
 
@@ -444,6 +445,7 @@ void AMyPlayerController::DestroyVoxel(float Value)
 						}
 					};
 
+					LOG("hh  %s", *v.ToString());
 					// 0 ~ 17 - 0, 17 is edge and 1 ~ 16 is chunk voxel
 					// destroy voxel index 1 and 16 is first, last index voxel
 					if (v.X == 1)

@@ -193,20 +193,20 @@ bool AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 				{
 					for (int z = 0; z < 6; ++z)
 					{
-						const int tIndex_x = x + e.X;
-						const int tIndex_y = y + e.Y;
-						const int tIndex_z = z + e.Z;
+						const int tx = x + e.X;
+						const int ty = y + e.Y;
+						const int tz = z + e.Z;
 						
 						// Center
 						if ((x == 0) && (y == 0) && (z < 5))
 						{
-							TreeCoord.Add(FVoxelCoord(FIntVector(tIndex_x, tIndex_y, tIndex_z), EVoxelType::Log));
+							TreeCoord.Add(FVoxelCoord(FIntVector(tx, ty, tz), EVoxelType::Log));
 						}
 						else if (z > 1)
 						{
 							if ((RandomStream.FRand() < 0.08f) || ((abs(x) < 2) && (abs(y) < 2)))
 							{
-								TreeCoord.Add(FVoxelCoord(FIntVector(tIndex_x, tIndex_y, tIndex_z), EVoxelType::Leaves_Far));
+								TreeCoord.Add(FVoxelCoord(FIntVector(tx, ty, tz), EVoxelType::Leaves_Far));
 							}
 						}
 					}
@@ -542,25 +542,59 @@ void AVoxelChunk::RefreshMesh()
  */
 bool AVoxelChunk::SetVoxel(const FIntVector& VoxelLocation, EVoxelType& value, bool bIsDestroying)
 {
+	auto CheckEdge = [&chunkXYSize = chunkXYSize](const int& a) -> bool { return ((a == 0) || (a == chunkXYSize - 1)) ? true : false; };
+	
 	int32 index = VoxelLocation.X + (VoxelLocation.Y * chunkXYSize) + (VoxelLocation.Z * chunkXYSizeX2);
 
 	// Range Check
 	if ((index >= 0) && (index < chunkElements.Num()))
 	{
 		EVoxelType ret = chunkElements[index];
-		if (!bIsDestroying && ret != EVoxelType::Empty) { return false; }
+		if (!bIsDestroying) 
+		{ 
+			if (ret != EVoxelType::Empty)
+			{
+				return false;
+			}
+			if (CheckEdge(VoxelLocation.X) || CheckEdge(VoxelLocation.Y) || CheckEdge(VoxelLocation.Z))
+			{
+				return false;
+			}
 
-		if (value >= EVoxelType::Log && value <= EVoxelType::Leaves_Far)
+			if (chunkElements[index] != EVoxelType::Empty)
+			{
+				return false;
+			}
+			chunkElements[index] = value;
+			value = ret;
+		}
+		else
 		{
+			chunkElements[index] = EVoxelType::Empty;
+		}
+
+		/*if (value >= EVoxelType::Log && value <= EVoxelType::Leaves_Far)
+		{
+			for (auto& e : TreeCoord)
+			{
+				if ((e.Coord == VoxelLocation) && (e.VoxelType != EVoxelType::Empty))
+				{
+					return false;
+				}
+			}
+
 			TreeCoord.Add(FVoxelCoord(VoxelLocation - FIntVector(FVector::OneVector), value));
 			chunkElements[index] = EVoxelType::Empty;
 		}
 		else
 		{
+			if (chunkElements[index] != EVoxelType::Empty)
+			{
+				return false;
+			}
 			chunkElements[index] = value;
-		}
+		}*/
 
-		value = ret;
 		GenerateChunk();
 		return true;
 	}
@@ -592,10 +626,7 @@ bool AVoxelChunk::DestroyVoxel(const FIntVector& VoxelLocation, EVoxelType& e, f
 
 	if (DestroyVoxelIndex >= 0 && DestroyVoxelIndex < chunkElements.Num())
 	{
-		if (chunkElements[DestroyVoxelIndex] != EVoxelType::Empty   &&
-			chunkElements[DestroyVoxelIndex] != EVoxelType::Log     &&
-			chunkElements[DestroyVoxelIndex] != EVoxelType::Leaves  &&
-			chunkElements[DestroyVoxelIndex] != EVoxelType::Leaves_Far)
+		if (chunkElements[DestroyVoxelIndex] != EVoxelType::Empty)
 		{
 			bIsDestroyingTree = false;
 		}
