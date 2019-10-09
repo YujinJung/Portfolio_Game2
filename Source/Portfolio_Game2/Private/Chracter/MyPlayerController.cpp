@@ -367,6 +367,7 @@ void AMyPlayerController::PlaceVoxel()
 			}
 
 			ChunkArray.Add(MoveTemp(SpawnChunk));
+			QuickSlotUI->CurrentVoxelMinusOne();
 		}
 		else
 		{
@@ -376,8 +377,8 @@ void AMyPlayerController::PlaceVoxel()
 			{
 				return;
 			}
+			QuickSlotUI->CurrentVoxelMinusOne();
 		}
-		QuickSlotUI->CurrentVoxelMinusOne();
 	}
 }
 

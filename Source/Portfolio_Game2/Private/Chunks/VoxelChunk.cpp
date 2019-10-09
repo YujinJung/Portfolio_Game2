@@ -183,6 +183,7 @@ bool AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 		}
 	}
 
+	TArray<int32> Tree;
 	{
 		// Tree Type
 		for (auto& e : TreeIndex)
@@ -193,20 +194,31 @@ bool AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
 				{
 					for (int z = 0; z < 6; ++z)
 					{
-						const int tIndex_x = x + e.X;
-						const int tIndex_y = y + e.Y;
-						const int tIndex_z = z + e.Z;
+						const int tx = x + e.X;
+						const int ty = y + e.Y;
+						const int tz = z + e.Z;
 						
+						int32 index = tx + (ty * chunkXYSize) + (tz * chunkXYSizeX2);
+
 						// Center
 						if ((x == 0) && (y == 0) && (z < 5))
 						{
-							TreeCoord.Add(FVoxelCoord(FIntVector(tIndex_x, tIndex_y, tIndex_z), EVoxelType::Log));
+							if (tz > 16 || index >= chunkElements.Num())
+							{
+								Tree.Add(index - ((tz - 16) * chunkXYSizeX2));
+							}
+							else
+							{
+
+							}
+
+							TreeCoord.Add(FVoxelCoord(FIntVector(tx, ty, tz), EVoxelType::Log));
 						}
 						else if (z > 1)
 						{
 							if ((RandomStream.FRand() < 0.08f) || ((abs(x) < 2) && (abs(y) < 2)))
 							{
-								TreeCoord.Add(FVoxelCoord(FIntVector(tIndex_x, tIndex_y, tIndex_z), EVoxelType::Leaves_Far));
+								TreeCoord.Add(FVoxelCoord(FIntVector(tx, ty, tz), EVoxelType::Leaves_Far));
 							}
 						}
 					}
@@ -557,6 +569,10 @@ bool AVoxelChunk::SetVoxel(const FIntVector& VoxelLocation, EVoxelType& value, b
 		}
 		else
 		{
+			if (chunkElements[index] == EVoxelType::Empty)
+			{
+				return false;
+			}
 			chunkElements[index] = value;
 		}
 
