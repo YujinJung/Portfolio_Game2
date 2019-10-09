@@ -39,6 +39,8 @@ Noise 함수를 이용해서 맵이 불규칙적인 형태로 생성되도록 �
 ## Resource Pack
 [Sapixcraft](https://sapixcraft.com/index)
 
+[The Find!](https://www.planetminecraft.com/texture_pack/the-find/)
+
 ## Perlin Noise Function
 [SimplexNoise](https://github.com/devdad/SimplexNoise)
 
