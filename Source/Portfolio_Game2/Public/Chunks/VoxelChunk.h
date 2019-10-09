@@ -115,7 +115,7 @@ public:
 
 	/* Decide voxel type */
 	UFUNCTION(BlueprintCallable, Category = Voxel)
-	bool GenerateVoxelType(const FVector& PlayerLocation);
+	bool GenerateVoxelType(const FVector& PlayerLocation, TArray<EVoxelType>& Tree);
 
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	void DrawVoxels(TArray<FVoxelChunkSection>& ChunkSection, int32& triangleVerticeNum, FIntVector VoxelIndex, const int32& VoxelMeshIndex, const int32& triangleSide);

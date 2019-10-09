@@ -119,113 +119,129 @@ float AVoxelChunk::CalcDensity(float x, float y, float z)
  * Call only when spawned
  * @param ChunkLocation : chunk location index
  */
-bool AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation)
+bool AVoxelChunk::GenerateVoxelType(const FVector& ChunkLocation, TArray<EVoxelType>& Tree)
 {
 	chunkElements.SetNumUninitialized(chunkTotalSize);
 	FRandomStream RandomStream = FRandomStream(TreeRandomSeed);
 
-	for (int32 x = 0; x < chunkXYSize; ++x)
+	if (Tree.Num() == 0)
 	{
-		for (int32 y = 0; y < chunkXYSize; ++y)
+		for (int32 x = 0; x < chunkXYSize; ++x)
 		{
-			bool isTop = true; // check top 
-			int airCount = 0;
-			for (int32 z = chunkXYSize - 1; z >= 0; --z)
+			for (int32 y = 0; y < chunkXYSize; ++y)
 			{
-				int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
+				bool isTop = true; // check top 
+				int airCount = 0;
+				for (int32 z = chunkXYSize - 1; z >= 0; --z)
+				{
+					int32 index = x + (y * chunkXYSize) + (z * chunkXYSizeX2);
 
-				auto densityCoord = [&chunkXYSize = chunkXYSize](const float& a, const int32& b) -> float { return (a * (chunkXYSize - 2) + b - 1); };
-				float density = CalcDensity(densityCoord(ChunkLocation.X, x), densityCoord(ChunkLocation.Y, y), densityCoord(ChunkLocation.Z, z));
-				
-				/*if (density > 0.f)
-				{
-					float _z = densityCoord(ChunkLocation.Z, z);
+					auto densityCoord = [&chunkXYSize = chunkXYSize](const float& a, const int32& b) -> float { return (a * (chunkXYSize - 2) + b - 1); };
+					float density = CalcDensity(densityCoord(ChunkLocation.X, x), densityCoord(ChunkLocation.Y, y), densityCoord(ChunkLocation.Z, z));
 
-					if (_z != 0)
+					/*if (density > 0.f)
 					{
-						density += 30.f * (1 / _z);
-					}
-				}*/
-			
-				if (density < 0.f)
-				{
-					chunkElements[index] = EVoxelType::Empty;
-					airCount++;
-					if (airCount == 3) { isTop = true; airCount = 0; }
-				}
-				/*else if ((density + ((1 - (z / chunkZSize)) * 4.5f)) >= 5.f)
-				{
-					chunkElements[index] = EVoxelType::Stone;
-				}*/
-				else if (density >= 5.0f)
-				{
-					chunkElements[index] = EVoxelType::Stone;
-				}
-				else if (density >= 0.f)
-				{
-					if (isTop)
-					{
-						static auto CheckEdge = [&chunkXYSize = chunkXYSize](const int& x) -> bool { return ((x == 0) || (x == chunkXYSize - 1)) ? false : true; };
-						if (bIsTopChunk && CheckEdge(x) && CheckEdge(y) && RandomStream.FRand() < 0.01f)
+						float _z = densityCoord(ChunkLocation.Z, z);
+
+						if (_z != 0)
 						{
-							TreeIndex.Add(FIntVector(x - 1, y - 1, z));
+							density += 30.f * (1 / _z);
 						}
-						chunkElements[index] = EVoxelType::Grass;
-						isTop = false;
-					}
-					else
+					}*/
+
+					if (density < 0.f)
 					{
-						chunkElements[index] = EVoxelType::Dirt;
+						chunkElements[index] = EVoxelType::Empty;
+						airCount++;
+						if (airCount == 3) { isTop = true; airCount = 0; }
 					}
-					airCount = 0;
-				}
-			}
-		}
-	}
-
-	TArray<int32> Tree;
-	{
-		// Tree Type
-		for (auto& e : TreeIndex)
-		{
-			for (int x = -2; x < 3; ++x)
-			{
-				for (int y = -2; y < 3; ++y)
-				{
-					for (int z = 0; z < 6; ++z)
+					/*else if ((density + ((1 - (z / chunkZSize)) * 4.5f)) >= 5.f)
 					{
-						const int tx = x + e.X;
-						const int ty = y + e.Y;
-						const int tz = z + e.Z;
-						
-						int32 index = tx + (ty * chunkXYSize) + (tz * chunkXYSizeX2);
-
-						// Center
-						if ((x == 0) && (y == 0) && (z < 5))
+						chunkElements[index] = EVoxelType::Stone;
+					}*/
+					else if (density >= 5.0f)
+					{
+						chunkElements[index] = EVoxelType::Stone;
+					}
+					else if (density >= 0.f)
+					{
+						if (isTop)
 						{
-							if (tz > 16 || index >= chunkElements.Num())
+							static auto CheckEdge = [&chunkXYSize = chunkXYSize](const int& x) -> bool { return ((x == 0) && (x == chunkXYSize - 1)) ? false : true; };
+							if (bIsTopChunk && CheckEdge(x) && CheckEdge(y) && z < chunkXYSize && RandomStream.FRand() < 0.01f)
 							{
-								Tree.Add(index - ((tz - 16) * chunkXYSizeX2));
+								TreeIndex.Add(FIntVector(x, y, z + 1));
 							}
-							else
-							{
-
-							}
-
-							TreeCoord.Add(FVoxelCoord(FIntVector(tx, ty, tz), EVoxelType::Log));
+							chunkElements[index] = EVoxelType::Grass;
+							isTop = false;
 						}
-						else if (z > 1)
+						else
 						{
-							if ((RandomStream.FRand() < 0.08f) || ((abs(x) < 2) && (abs(y) < 2)))
-							{
-								TreeCoord.Add(FVoxelCoord(FIntVector(tx, ty, tz), EVoxelType::Leaves_Far));
-							}
+							chunkElements[index] = EVoxelType::Dirt;
 						}
+						airCount = 0;
 					}
 				}
 			}
 		}
+
+		{
+			Tree.SetNumZeroed(chunkTotalSize);
+			// Tree Type
+			for (auto& e : TreeIndex)
+			{
+				for (int x = -2; x < 3; ++x)
+				{
+					for (int y = -2; y < 3; ++y)
+					{
+						for (int z = 0; z < 6; ++z)
+						{
+							const int tx = x + e.X;
+							const int ty = y + e.Y;
+							const int tz = z + e.Z;
+
+							int32 index = tx + (ty * chunkXYSize) + (tz * chunkXYSizeX2);
+
+							// Center
+							if ((x == 0) && (y == 0) && (z < 5))
+							{
+								if (tz > 16 || index >= chunkElements.Num())
+								{
+									Tree[index - (16 * chunkXYSizeX2)] = EVoxelType::Log;
+								}
+								else
+								{
+									chunkElements[index] = EVoxelType::Log;
+								}
+
+								//TreeCoord.Add(FVoxelCoord(FIntVector(tx, ty, tz), EVoxelType::Log));
+							}
+							else if (z > 1)
+							{
+								if ((RandomStream.FRand() < 0.08f) || ((abs(x) < 2) && (abs(y) < 2)))
+								{
+									if (tz > 16 || index >= chunkElements.Num())
+									{
+										Tree[index - (16 * chunkXYSizeX2)] = EVoxelType::Leaves_Far;
+									}
+									else
+									{
+										chunkElements[index] = EVoxelType::Leaves_Far;
+									}
+									//TreeCoord.Add(FVoxelCoord(FIntVector(tx, ty, tz), EVoxelType::Leaves_Far));
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 	}
+	else
+	{
+		chunkElements = Tree;
+	}
+	
 
 	return GenerateChunk();
 }
@@ -468,7 +484,7 @@ bool AVoxelChunk::GenerateChunk()
 		}
 	}
 
-	GenerateTree(ChunkSection);
+	//GenerateTree(ChunkSection);
 
 	VoxelMeshComponent->ClearAllMeshSections();
 

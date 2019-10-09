@@ -147,10 +147,20 @@ void AMyPlayerController::UpdateChunkMap()
 						SpawnChunk->SetIsTopChunk(true);
 						bFindTopChunk = true;
 					}
-					bool ret = SpawnChunk->GenerateVoxelType(FVector(CheckChunkCoord));
+
+					TArray<EVoxelType> Tree;
+					Tree.SetNum(0);
+					bool ret = SpawnChunk->GenerateVoxelType(FVector(CheckChunkCoord), Tree);
 					if (ret)
 					{
 						ChunkArray.Add(MoveTemp(SpawnChunk));
+						if (Tree.Num() != 0)
+						{
+							CheckChunkCoord += FIntVector(0, 0, 1);
+							AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(CheckChunkCoord * ChunkSize), FRotator::ZeroRotator);
+							SpawnChunk->SetChunkIndex(CheckChunkCoord);
+							SpawnChunk->GenerateVoxelType(FVector(CheckChunkCoord), Tree);
+						}
 					}
 					else
 					{
@@ -353,10 +363,10 @@ void AMyPlayerController::PlaceVoxel()
 
 		if (ChunkIndex == INDEX_NONE)
 		{
-			
 			AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(PlaceLocationChunkIndex * ChunkSize), FRotator::ZeroRotator);
 			SpawnChunk->SetChunkIndex(PlaceLocationChunkIndex);
-			bool ret = SpawnChunk->GenerateVoxelType(FVector(PlaceLocationChunkIndex));
+			TArray<EVoxelType> Tree;
+			bool ret = SpawnChunk->GenerateVoxelType(FVector(PlaceLocationChunkIndex), Tree);
 
 			FVector VoxelLocalLocation = Hit.Location - SpawnChunk->GetActorLocation() + (VoxelSize / 2) * FVector::OneVector + Hit.Normal;
 			VoxelLocalLocation = VoxelLocalLocation / VoxelSize + FVector::OneVector;
@@ -439,7 +449,8 @@ void AMyPlayerController::DestroyVoxel(float Value)
 						{
 							AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(CheckChunkCoord * ChunkSize), FRotator::ZeroRotator);
 							SpawnChunk->SetChunkIndex(CheckChunkCoord);
-							bool ret = SpawnChunk->GenerateVoxelType(FVector(CheckChunkCoord));
+							TArray<EVoxelType> Tree;
+							bool ret = SpawnChunk->GenerateVoxelType(FVector(CheckChunkCoord), Tree);
 							SpawnChunk->SetVoxel(CheckVoxelLocalLocation, e, true);
 							ChunkArray.Add(MoveTemp(SpawnChunk));
 						}
