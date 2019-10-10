@@ -33,7 +33,7 @@ AMyCharacter::AMyCharacter()
 	FollowCamera->AttachTo(CameraBoom, CameraBoom->SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
-	isPause = false;
+	bIsPause = false;
 
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -56,7 +56,7 @@ void AMyCharacter::BeginPlay()
 
 void AMyCharacter::MoveForward(float Value)
 {
-	if ((!isPause) && (Controller != NULL) && (Value != 0.f))
+	if ((!bIsPause) && (Controller != NULL) && (Value != 0.f))
 	{
 		const FRotator Rotation = GetActorRotation();
 		const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
@@ -68,7 +68,7 @@ void AMyCharacter::MoveForward(float Value)
 
 void AMyCharacter::MoveRight(float Value)
 {
-	if ((!isPause) && (Controller != NULL) && (Value != 0.f))
+	if ((!bIsPause) && (Controller != NULL) && (Value != 0.f))
 	{
 		const FRotator Rotation = GetActorRotation();
 		const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
@@ -80,7 +80,7 @@ void AMyCharacter::MoveRight(float Value)
 
 void AMyCharacter::TurnAtRate(float Rate)
 {
-	if (!isPause)
+	if (!bIsPause)
 	{
 		float R = Rate * BaseTurnAtRate * GetWorld()->GetDeltaSeconds();
 		float MinMaxRate = 0.8f;
@@ -99,7 +99,7 @@ void AMyCharacter::TurnAtRate(float Rate)
 
 void AMyCharacter::LookUpAtRate(float Rate)
 {
-	if (!isPause)
+	if (!bIsPause)
 	{
 		float R = Rate * BaseLookUpAtRate * GetWorld()->GetDeltaSeconds();
 		float MinMaxRate = 0.8f;
@@ -130,15 +130,15 @@ void AMyCharacter::PauseGame()
 
 	if (PlayerController)
 	{
-		isPause = !isPause;
+		bIsPause = !bIsPause;
 
-		if (isPause)
+		if (bIsPause)
 		{
 			PlayerController->bShowMouseCursor = true;
 			PlayerController->bEnableClickEvents = true;
 			PlayerController->bEnableMouseOverEvents = true;
 		}
-		else if (!isPause)
+		else if (!bIsPause)
 		{
 			PlayerController->bShowMouseCursor = false;
 			PlayerController->bEnableClickEvents = false;

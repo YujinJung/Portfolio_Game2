@@ -81,3 +81,9 @@ Content/StarterContent
 
 # Resource Packs
 # Content/MinecraftContents
+
+# Document
+*.docx
+
+# 실행
+실행파일/*

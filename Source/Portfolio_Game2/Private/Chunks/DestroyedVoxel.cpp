@@ -38,8 +38,8 @@ ADestroyedVoxel::ADestroyedVoxel()
 	VoxelMeshComponent->SetCollisionObjectType(ECollisionChannel::ECC_Visibility);
 	VoxelMeshComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 
-	VoxelMeshComponent->RegisterComponent();
-	RootComponent = VoxelMeshComponent;
+	//VoxelMeshComponent->RegisterComponent();
+	//RootComponent = VoxelMeshComponent;
 
 	voxelSize = 20;
 	voxelHalfSize = voxelSize / 2;
@@ -76,7 +76,7 @@ void ADestroyedVoxel::Tick(float DeltaTime)
 
 	FVector DestroyedVoxelLocation = GetActorLocation();
 	FRotator DestroyedVoxelRotation = GetActorRotation();
-	float RotationSpeed = 0.1f;
+	float RotationSpeed = 0.2f;
 
 	/* floating voxel */
 	if (!isDown)
@@ -135,10 +135,10 @@ void ADestroyedVoxel::CheckGravity()
 	TraceParams.bReturnPhysicalMaterial = true;
 
 	// Draw LineTrace
-	const FName TraceTag("MyTraceTag");
+	/*const FName TraceTag("MyTraceTag");
 	auto world = GetWorld();
 	world->DebugDrawTraceTag = TraceTag;
-	TraceParams.TraceTag = TraceTag;
+	TraceParams.TraceTag = TraceTag;*/
 
 	GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, EndTrace, ECollisionChannel::ECC_PhysicsBody, TraceParams);
 

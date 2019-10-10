@@ -4,6 +4,11 @@
 마인크래프트의 기능 중 블록을 부수고 배치할 수 있는 기능을 만든 게임입니다.
 
 ---
+
+![](./Image/MainMenu.png)
+
+Main Menu에서 Start를 통해 시작할 수 있고, Quit를 통해 종료할 수 있습니다.
+
 ## 블록 부수기
 ![](./Image/Destroy.gif)
 
@@ -23,6 +28,7 @@
 ## 맵
 ![](./Image/map.png)
 ![](./Image/map2.png)
+![](./Image/map3.png)
 
 Noise 함수를 이용해서 맵이 불규칙적인 형태로 생성되도록 했다.<br>
 그리고 보이지 않는 블럭은 그리지 않도록 청크단위로 관리했다.
@@ -33,6 +39,16 @@ Noise 함수를 이용해서 맵이 불규칙적인 형태로 생성되도록 �
 동굴은 지면 아래에 랜덤한 형태로 생성된다.
 
 
+![](./Image/DayNight.gif)
+
+밤과 낮이 시간에 따라 변한다.
+
+![](./Image/MapLoading.gif)
+
+플레이어의 위치에 따라 청크단위로 삭제/생성된다. <br/>
+(영상은 임의로 플레이어 주변 청크가 조금만 생성되게 한 후 촬영하였습니다)
+
+<br/>
 
 ---
 
@@ -44,3 +60,5 @@ Noise 함수를 이용해서 맵이 불규칙적인 형태로 생성되도록 �
 ## Perlin Noise Function
 [SimplexNoise](https://github.com/devdad/SimplexNoise)
 
+## Font
+[배달의민족 주아](http://font.woowahan.com/jua/)

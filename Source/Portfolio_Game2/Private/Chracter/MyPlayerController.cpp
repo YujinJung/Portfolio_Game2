@@ -97,35 +97,6 @@ void AMyPlayerController::UpdateChunkMap()
 		yEnd = ChunkXYRangeInWorld;
 	}
 
-	/*
-	for (int j = yStart; j <= yEnd; ++j)
-	{
-		FVector2D CheckChunkCoord(x + x_i, y + j);
-		int CheckChunkIndex = FindChunkIndex(CheckChunkCoord);
-
-		if (CheckChunkIndex == -1)
-		{
-			if (CheckRadius(FVector(CheckChunkCoord * ChunkSize, 0.f), MaxChunkRadius))
-			{
-				AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(CheckChunkCoord * ChunkSize, 0.f), FRotator::ZeroRotator);
-				SpawnChunk->SetChunkIndex(CheckChunkCoord);
-				SpawnChunk->GenerateVoxelType(FVector(CheckChunkCoord, 0.f));
-				ChunkArray.Add(MoveTemp(SpawnChunk));
-			}
-		}
-		else
-		{
-			auto& CheckChunk = ChunkArray[CheckChunkIndex];
-
-			if ((StandChunkIndex != CheckChunkIndex) && (CheckChunk->IsCurrentChunk()))
-			{
-				CheckChunk->SetIsCurrentChunk(false);
-				CheckChunk->RefreshLeaves();
-			}
-		}
-	}
-	*/
-
 	static const int32 chunkTotalSize = VoxelRangeInChunk * VoxelRangeInChunk;
 
 	for (int j = yStart; j <= yEnd; ++j)
@@ -260,6 +231,7 @@ void AMyPlayerController::CheckPlayerStandChunk()
 	int PlayerChunkIndex = FindChunkIndex(PlayerChunkVector);
 
 	const int updateIndex = 4 * ChunkXYRangeInWorld + 1; // 7 is z
+
 	// Plyaer Move && End Update
 	if ((PlayerChunkIndex != -1) && (PlayerStandChunkIndex != PlayerChunkIndex) && (GetWorldTimerManager().GetTimerElapsed(MapLoadTimerHandle) == -1))
 	{
@@ -347,7 +319,6 @@ void AMyPlayerController::PlaceVoxel()
 		
 		PlaceLocation /= ChunkSize;
 		FIntVector PlaceLocationChunkIndex(floor(PlaceLocation.X), floor(PlaceLocation.Y), floor(PlaceLocation.Z));
-		LOG("dd %s", *PlaceLocationChunkIndex.ToString());
 		int32 ChunkIndex = FindChunkIndex(PlaceLocationChunkIndex);
 
 		EVoxelType PlaceVoxelType = QuickSlotUI->GetCurrentVoxelItem().VoxelType;
@@ -445,7 +416,6 @@ void AMyPlayerController::DestroyVoxel(float Value)
 						}
 					};
 
-					LOG("hh  %s", *v.ToString());
 					// 0 ~ 17 - 0, 17 is edge and 1 ~ 16 is chunk voxel
 					// destroy voxel index 1 and 16 is first, last index voxel
 					if (v.X == 1)
@@ -478,7 +448,6 @@ void AMyPlayerController::DestroyVoxel(float Value)
 
 
 				// Drop Destroy Voxel
-				//FVector DestroyedVoxelLocation = HitLocation/* - (20.f) * FVector::OneVector*/;
 				FVector DestroyedVoxelLocation = FVector(ChunkCoord * ChunkSize + FIntVector(VoxelLocalLocation - (1.f) * FVector::OneVector) * VoxelSize);
 				DestroyedVoxelLocation += DirectionVector * (VoxelSize * 0.25);
 				ADestroyedVoxel* DestroyedVoxel = GetWorld()->SpawnActor<ADestroyedVoxel>(DestroyedVoxelLocation, FRotator::ZeroRotator);
@@ -506,10 +475,10 @@ bool AMyPlayerController::CheckVoxel(FHitResult& OutHit, FIntVector& ChunkIndex)
 	TraceParams.AddIgnoredActor(GetPawn());
 
 	// Draw LineTrace
-	const FName TraceTag("MyTraceTag");
-	auto world = GetWorld();
-	world->DebugDrawTraceTag = TraceTag;
-	TraceParams.TraceTag = TraceTag;
+	//const FName TraceTag("MyTraceTag");
+	//auto world = GetWorld();
+	//world->DebugDrawTraceTag = TraceTag;
+	//TraceParams.TraceTag = TraceTag;
 
 	GetWorld()->LineTraceSingleByChannel(OutHit, StartTrace, EndTrace, ECollisionChannel::ECC_WorldStatic, TraceParams);
 
@@ -573,6 +542,24 @@ void AMyPlayerController::LootingVoxel()
 void AMyPlayerController::SetIsOpenInventory(bool _bIsOpenInventory)
 {
 	bIsOpenInventory = _bIsOpenInventory;
+}
+
+void AMyPlayerController::PauseGame()
+{
+	bIsPause = !bIsPause;
+
+	if (bIsPause)
+	{
+		bShowMouseCursor = true;
+		bEnableClickEvents = true;
+		bEnableMouseOverEvents = true;
+	}
+	else if (!bIsPause)
+	{
+		bShowMouseCursor = false;
+		bEnableClickEvents = false;
+		bEnableMouseOverEvents = false;
+	}
 }
 
 void AMyPlayerController::SetupInputComponent()

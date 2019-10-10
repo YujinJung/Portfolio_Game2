@@ -72,6 +72,10 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
 	float LootingRadius;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UI, meta = (AllowPrivateAccess = true))
+	bool bIsPause;
+
+
 public:
 	// Create / Update / Destory Chunk
 	UFUNCTION(BlueprintCallable, Category = Chunk)
@@ -112,11 +116,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Inventory)
 	void SetIsOpenInventory(bool _bIsOpenInventory);
 
+	// Pause
+	UFUNCTION(BlueprintCallable, Category = UI)
+	void PauseGame();
+
+	UFUNCTION(BlueprintPure, Category = UI)
+	FORCEINLINE bool IsPause() const { return bIsPause; }
 
 	virtual void SetupInputComponent() override;
 
 public:
 	UFUNCTION(BlueprintCallable, Category = Chunk)
 	bool CheckRadius(const FVector& ChunkCoord, const float Radius);
-
 };

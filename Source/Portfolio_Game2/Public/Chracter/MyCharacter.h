@@ -50,7 +50,7 @@ protected:
 private:
 	// UI
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UI, meta = (AllowPrivateAccess = true))
-		bool isPause;
+		bool bIsPause;
 
 
 public:
@@ -58,7 +58,10 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION(BlueprintCallable, Category = UI)
-		void PauseGame();
+	void SetIsPause(bool _p) { bIsPause = _p; }
+
+	UFUNCTION(BlueprintCallable, Category = UI)
+	void PauseGame();
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
