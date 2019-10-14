@@ -37,8 +37,7 @@ AVoxelChunk::AVoxelChunk()
 
 	FString name = "Voxel_" + FString::FromInt(chunkXIndex) + "_" + FString::FromInt(chunkYIndex);
 	VoxelMeshComponent = CreateDefaultSubobject<UProceduralMeshComponent>(*name);
-	//VoxelMeshComponent->RegisterComponent();
-	//RootComponent = VoxelMeshComponent;
+	RootComponent = VoxelMeshComponent;
 	VoxelMeshComponent->bUseAsyncCooking = true;
 	bIsCurrentChunk = false;
 

@@ -1,1 +1,2 @@
 Launch/Portfolio_Game2/Binaries/Win64/Portfolio_Game2.pdb filter=lfs diff=lfs merge=lfs -text
+Package/Portfolio_Game2/Content/Paks/Portfolio_Game2-WindowsNoEditor.pak filter=lfs diff=lfs merge=lfs -text

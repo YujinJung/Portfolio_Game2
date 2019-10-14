@@ -37,9 +37,7 @@ ADestroyedVoxel::ADestroyedVoxel()
 	
 	VoxelMeshComponent->SetCollisionObjectType(ECollisionChannel::ECC_Visibility);
 	VoxelMeshComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
-
-	//VoxelMeshComponent->RegisterComponent();
-	//RootComponent = VoxelMeshComponent;
+	RootComponent = VoxelMeshComponent;
 
 	voxelSize = 20;
 	voxelHalfSize = voxelSize / 2;
