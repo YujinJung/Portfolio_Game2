@@ -55,7 +55,7 @@ AVoxelChunk::AVoxelChunk()
 	TreeRandomSeed = 10;
 
 	MaxDestroyValue = 100.f;
-	DestroySpeed = 0.1f;
+	DestroySpeed = 0.3f;
 	isRunningTime = false;
 	bIsDestroyingTree = false;
 

@@ -71,6 +71,9 @@ private:
 	// Looting
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
 	float LootingRadius;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
+	bool bIsChangeQuickSlot;
+
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UI, meta = (AllowPrivateAccess = true))
 	bool bIsPause;
@@ -107,6 +110,11 @@ public:
 	// Quick Slot / Inventory System
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	void LootingVoxel();
+	
+	UFUNCTION(BlueprintPure, Category = QuickSlot)
+	FORCEINLINE bool IsChangeQuickSlot() const { return bIsChangeQuickSlot; }
+	UFUNCTION(BlueprintCallable, Category = QuickSlot)
+	void SetIsChangeQuickSlot(bool _bIsChangeQuickSlot) { bIsChangeQuickSlot = _bIsChangeQuickSlot; }
 
 	UFUNCTION(BlueprintPure, Category = QuickSlot)
 	FORCEINLINE UQuickSlot* GetQuickSlotUI() const { return QuickSlotUI; }

@@ -1,4 +1,4 @@
-Portfolio_Game2/Binaries/Win64/Portfolio_Game2.exe	2019-10-14T07:00:47.568Z
+Portfolio_Game2/Binaries/Win64/Portfolio_Game2.exe	2019-10-15T13:50:40.637Z
 Engine/Extras/Redist/en-us/UE4PrereqSetup_x64.exe	2019-05-14T03:15:11.037Z
 Engine/Binaries/ThirdParty/Oculus/OVRPlugin/OVRPlugin/Win64/OVRPlugin.dll	2019-05-14T03:13:28.616Z
 Engine/Binaries/ThirdParty/DbgHelp/dbghelp.dll	2019-05-14T03:13:15.088Z
@@ -18,4 +18,4 @@ Engine/Binaries/ThirdParty/OpenVR/OpenVRv1_0_16/Win64/openvr_api.dll	2019-05-14T
 Engine/Binaries/ThirdParty/Ogg/Win64/VS2015/libogg_64.dll	2019-05-14T03:13:28.679Z
 Engine/Binaries/ThirdParty/Vorbis/Win64/VS2015/libvorbis_64.dll	2019-05-14T03:13:50.139Z
 Engine/Binaries/ThirdParty/Vorbis/Win64/VS2015/libvorbisfile_64.dll	2019-05-14T03:13:50.148Z
-Portfolio_Game2.exe	2019-10-14T07:41:15.896Z
+Portfolio_Game2.exe	2019-10-15T13:50:51.875Z

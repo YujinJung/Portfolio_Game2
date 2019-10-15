@@ -39,11 +39,15 @@ protected:
 	virtual void BeginPlay() override;
 
 	// Character Movement
+	UFUNCTION(BlueprintCallable, Category = Move)
 	void MoveForward(float Value);
+	UFUNCTION(BlueprintCallable, Category = Move)
 	void MoveRight(float Value);
 
 	// Mouse Movement
+	UFUNCTION(BlueprintCallable, Category = MouseMove)
 	void TurnAtRate(float Rate);
+	UFUNCTION(BlueprintCallable, Category = MouseMove)
 	void LookUpAtRate(float Rate);
 
 

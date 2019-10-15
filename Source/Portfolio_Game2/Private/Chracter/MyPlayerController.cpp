@@ -43,6 +43,7 @@ void AMyPlayerController::BeginPlay()
 	PlayerStandChunkIndex = 0;
 
 	LootingRadius = 200.f;
+	bIsChangeQuickSlot = true;
 
 	// Create QuickSlot Object
 	QuickSlotUI = NewObject<UQuickSlot>();
@@ -350,6 +351,8 @@ void AMyPlayerController::PlaceVoxel()
 			}
 			QuickSlotUI->CurrentVoxelMinusOne();
 		}
+
+		bIsChangeQuickSlot = true;
 	}
 }
 
@@ -526,9 +529,10 @@ void AMyPlayerController::LootingVoxel()
 			if (QuickSlotUI->LootingVoxel(LootingVoxelItem))
 			{
 				// TODO : fly Voxel 
-								// Destory Looting Voxel
+				// Destory Looting Voxel
 				cDestroyedVoxel->Destroy();
 				DestroyedVoxelArray.RemoveAtSwap(index);
+				bIsChangeQuickSlot = true;
 			}
 
 			continue;
