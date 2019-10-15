@@ -448,12 +448,15 @@ void AMyPlayerController::DestroyVoxel(float Value)
 
 
 				// Drop Destroy Voxel
-				FVector DestroyedVoxelLocation = FVector(ChunkCoord * ChunkSize + FIntVector(VoxelLocalLocation - (1.f) * FVector::OneVector) * VoxelSize);
-				DestroyedVoxelLocation += DirectionVector * (VoxelSize * 0.25);
-				ADestroyedVoxel* DestroyedVoxel = GetWorld()->SpawnActor<ADestroyedVoxel>(DestroyedVoxelLocation, FRotator::ZeroRotator);
-				DestroyedVoxel->GenerateVoxel(DestroyedVoxelLocation, DestroyedVoxelType);
-				DestroyedVoxel->SetNum(1);
-				DestroyedVoxelArray.Add(MoveTemp(DestroyedVoxel));
+				if (DestroyedVoxelType != EVoxelType::Leaves)
+				{
+					FVector DestroyedVoxelLocation = FVector(ChunkCoord * ChunkSize + FIntVector(VoxelLocalLocation - (1.f) * FVector::OneVector) * VoxelSize);
+					DestroyedVoxelLocation += DirectionVector * (VoxelSize * 0.25);
+					ADestroyedVoxel* DestroyedVoxel = GetWorld()->SpawnActor<ADestroyedVoxel>(DestroyedVoxelLocation, FRotator::ZeroRotator);
+					DestroyedVoxel->GenerateVoxel(DestroyedVoxelLocation, DestroyedVoxelType);
+					DestroyedVoxel->SetNum(1);
+					DestroyedVoxelArray.Add(MoveTemp(DestroyedVoxel));
+				}
 			}
 		}
 	}
