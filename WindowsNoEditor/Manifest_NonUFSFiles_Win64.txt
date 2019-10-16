@@ -18,4 +18,4 @@ Engine/Binaries/ThirdParty/OpenVR/OpenVRv1_0_16/Win64/openvr_api.dll	2019-05-14T
 Engine/Binaries/ThirdParty/Ogg/Win64/VS2015/libogg_64.dll	2019-05-14T03:13:28.679Z
 Engine/Binaries/ThirdParty/Vorbis/Win64/VS2015/libvorbis_64.dll	2019-05-14T03:13:50.139Z
 Engine/Binaries/ThirdParty/Vorbis/Win64/VS2015/libvorbisfile_64.dll	2019-05-14T03:13:50.148Z
-Portfolio_Game2.exe	2019-10-15T13:50:51.875Z
+Portfolio_Game2.exe	2019-10-16T07:47:08.912Z
