@@ -31,6 +31,7 @@ void AMyPlayerController::BeginPlay()
 
 	// Voxel Size
 	VoxelSize = 100.f;
+	VoxelHalfSize = VoxelSize / 2;
 	VoxelRangeInChunk = 16;
 	VoxelRangeInChunkX2 = VoxelRangeInChunk * 2;
 	ChunkSize = VoxelRangeInChunk * VoxelSize;
@@ -305,32 +306,42 @@ void AMyPlayerController::PlaceVoxel()
 		return;
 	}
 
+	auto CalculateChunkIndex = [&ChunkSize = ChunkSize](FVector inVector) -> FIntVector {
+		inVector /= ChunkSize;
+
+		inVector.X = floor(inVector.X);
+		inVector.Y = floor(inVector.Y);
+		inVector.Z = floor(inVector.Z);
+
+		return FIntVector(inVector);
+	};
+
 	FHitResult Hit;
-	FIntVector ChunkCoord;
-	if (CheckVoxel(Hit, ChunkCoord))
+	FIntVector ChunkIndex3D;
+	if (CheckVoxel(Hit, ChunkIndex3D))
 	{
-		FVector PlaceLocation = Hit.Location + (Hit.Normal * VoxelSize / 2);
-		FVector PlayerLocation = GetPawn()->GetActorLocation();
+		const FVector PlaceLocation = Hit.Location + (Hit.Normal * VoxelHalfSize) + VoxelHalfSize;
+		const FVector PlayerLocation = GetPawn()->GetActorLocation();
 
 		// Player Position
-		if (FIntVector(PlaceLocation / VoxelSize) == FIntVector(PlayerLocation / VoxelSize))
+		FIntVector PlaceVoxelIndex(PlaceLocation / VoxelSize);
+		FIntVector PlayerVoxelIndex(PlayerLocation / VoxelSize);
+		if (PlaceVoxelIndex == PlayerVoxelIndex)
 		{
 			return;
 		}
-		
-		PlaceLocation /= ChunkSize;
-		FIntVector PlaceLocationChunkIndex(floor(PlaceLocation.X), floor(PlaceLocation.Y), floor(PlaceLocation.Z));
-		int32 ChunkIndex = FindChunkIndex(PlaceLocationChunkIndex);
-
+	
+		const FIntVector PlaceLocationChunkIndex(CalculateChunkIndex(PlaceLocation));
+		const int32 ChunkIndex = FindChunkIndex(PlaceLocationChunkIndex);
 		EVoxelType PlaceVoxelType = QuickSlotUI->GetCurrentVoxelItem().VoxelType;
 
 		if (ChunkIndex == INDEX_NONE)
 		{
 			AVoxelChunk* SpawnChunk = GetWorld()->SpawnActor<AVoxelChunk>(FVector(PlaceLocationChunkIndex * ChunkSize), FRotator::ZeroRotator);
 			SpawnChunk->SetChunkIndex(PlaceLocationChunkIndex);
-			bool ret = SpawnChunk->GenerateVoxelType(FVector(PlaceLocationChunkIndex));
+			SpawnChunk->GenerateVoxelType(FVector(PlaceLocationChunkIndex));
 
-			FVector VoxelLocalLocation = Hit.Location - SpawnChunk->GetActorLocation() + (VoxelSize / 2) * FVector::OneVector + Hit.Normal;
+			FVector VoxelLocalLocation = PlaceLocation - SpawnChunk->GetActorLocation();
 			VoxelLocalLocation = VoxelLocalLocation / VoxelSize + FVector::OneVector;
 
 			if (!SpawnChunk->SetVoxel(FIntVector(VoxelLocalLocation), PlaceVoxelType))
@@ -343,8 +354,9 @@ void AMyPlayerController::PlaceVoxel()
 		}
 		else
 		{
-			FVector VoxelLocalLocation = Hit.Location - ChunkArray[ChunkIndex]->GetActorLocation() + (VoxelSize / 2) * FVector::OneVector + Hit.Normal;
+			FVector VoxelLocalLocation = PlaceLocation - ChunkArray[ChunkIndex]->GetActorLocation();
 			VoxelLocalLocation = VoxelLocalLocation / VoxelSize + FVector::OneVector;
+
 			if (!ChunkArray[ChunkIndex]->SetVoxel(FIntVector(VoxelLocalLocation), PlaceVoxelType))
 			{
 				return;
@@ -366,12 +378,12 @@ void AMyPlayerController::DestroyVoxel(float Value)
 	if (Value != 0.f)
 	{
 		FHitResult Hit;
-		FIntVector ChunkCoord;
-		if (!CheckVoxel(Hit, ChunkCoord)) 
+		FIntVector ChunkIndex3D;
+		if (!CheckVoxel(Hit, ChunkIndex3D)) 
 		{
 			return;
 		}
-		int32 ChunkIndex = FindChunkIndex(ChunkCoord);
+		const int32 ChunkIndex = FindChunkIndex(ChunkIndex3D);
 
 		if (ChunkIndex != INDEX_NONE)
 		{
@@ -383,7 +395,7 @@ void AMyPlayerController::DestroyVoxel(float Value)
 
 			FVector DirectionVector = (Hit.Location - GetPawn()->GetActorLocation()).GetSafeNormal();
 			FVector HitLocation = Hit.Location + DirectionVector;
-			FVector VoxelLocalLocation = HitLocation - ChunkArray[ChunkIndex]->GetActorLocation() + (VoxelSize / 2) * FVector::OneVector;
+			FVector VoxelLocalLocation = HitLocation + VoxelHalfSize - ChunkArray[ChunkIndex]->GetActorLocation();
 			VoxelLocalLocation = VoxelLocalLocation / VoxelSize + FVector::OneVector;
 
 			// DestroyedVoxelType - Return the type of destroyed voxel
@@ -395,7 +407,7 @@ void AMyPlayerController::DestroyVoxel(float Value)
 					FIntVector v(VoxelLocalLocation);
 
 					auto CheckSideChunk = [&](const FIntVector& ChunkOffset, const FIntVector& VoxelOffset1, const FIntVector& VoxelOffset2) {
-						FIntVector CheckChunkCoord = ChunkCoord + ChunkOffset;
+						FIntVector CheckChunkCoord = ChunkIndex3D + ChunkOffset;
 						int32 CheckChunkIndex = FindChunkIndex(CheckChunkCoord);
 						FIntVector CheckVoxelLocalLocation(VoxelLocalLocation);
 						CheckVoxelLocalLocation.X *= VoxelOffset1.X;
@@ -449,20 +461,28 @@ void AMyPlayerController::DestroyVoxel(float Value)
 					}
 				}
 
-
 				// Drop Destroy Voxel
 				if (DestroyedVoxelType != EVoxelType::Leaves)
 				{
-					FVector DestroyedVoxelLocation = FVector(ChunkCoord * ChunkSize + FIntVector(VoxelLocalLocation - (1.f) * FVector::OneVector) * VoxelSize);
+					LOG("ww");
+					const FIntVector ChunkCoord = ChunkIndex3D * ChunkSize;
+					const FIntVector VoxelLocalCoord = FIntVector(VoxelLocalLocation - FVector::OneVector) * VoxelSize;
+					FVector DestroyedVoxelLocation(ChunkCoord + VoxelLocalCoord);
+					DirectionVector.Z = 0.f;
 					DestroyedVoxelLocation += DirectionVector * (VoxelSize * 0.25);
-					ADestroyedVoxel* DestroyedVoxel = GetWorld()->SpawnActor<ADestroyedVoxel>(DestroyedVoxelLocation, FRotator::ZeroRotator);
-					DestroyedVoxel->GenerateVoxel(DestroyedVoxelLocation, DestroyedVoxelType);
-					DestroyedVoxel->SetNum(1);
-					DestroyedVoxelArray.Add(MoveTemp(DestroyedVoxel));
+					GenerateDestroyVoxel(DestroyedVoxelLocation, DestroyedVoxelType);
 				}
 			}
 		}
 	}
+}
+
+void AMyPlayerController::GenerateDestroyVoxel(const FVector& DestroyedVoxelLocation, const EVoxelType& DestroyedVoxelType)
+{
+	ADestroyedVoxel* DestroyedVoxel = GetWorld()->SpawnActor<ADestroyedVoxel>(DestroyedVoxelLocation, FRotator::ZeroRotator);
+	DestroyedVoxel->GenerateVoxel(DestroyedVoxelLocation, DestroyedVoxelType);
+	DestroyedVoxel->SetNum(1);
+	DestroyedVoxelArray.Add(MoveTemp(DestroyedVoxel));
 }
 
 bool AMyPlayerController::CheckVoxel(FHitResult& OutHit, FIntVector& ChunkIndex)

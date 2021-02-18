@@ -30,6 +30,8 @@ private:
 	// Voxel
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
 	float VoxelSize;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Voxel, meta = (AllowPrivateAccess = true))
+	float VoxelHalfSize;
 
 	// Chunk
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Chunk, meta = (AllowPrivateAccess = true))
@@ -99,6 +101,8 @@ public:
 	void PlaceVoxel();
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	void DestroyVoxel(float Value);
+	UFUNCTION(BlueprintCallable, Category = Voxel)
+	void GenerateDestroyVoxel(const FVector& DestroyedVoxelLocation, const EVoxelType& DestroyedVoxelType);
 	UFUNCTION(BlueprintCallable, Category = Voxel)
 	bool CheckVoxel(FHitResult& OutHit, FIntVector& index);
 
